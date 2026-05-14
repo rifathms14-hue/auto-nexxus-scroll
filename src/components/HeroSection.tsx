@@ -1,144 +1,180 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
+const TOTAL_FRAMES = 193;
+const FRAME_PATH = (i: number) =>
+  `/frames/frame_${String(i).padStart(4, "0")}.jpg`;
+
 export default function HeroSection() {
   const sectionRef = useRef<HTMLElement>(null);
-  const videoWrapRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const frameRef = useRef({ current: 0 });
+  const imagesRef = useRef<HTMLImageElement[]>([]);
+  const [loadedCount, setLoadedCount] = useState(0);
+  const isReadyRef = useRef(false);
+
+  // --- Text refs ---
   const eyebrowRef = useRef<HTMLDivElement>(null);
   const headlineRef = useRef<HTMLDivElement>(null);
   const sublineRef = useRef<HTMLDivElement>(null);
-  const scanlineRef = useRef<HTMLDivElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const scanRef = useRef<HTMLDivElement>(null);
 
+  // --- Draw a specific frame index to canvas ---
+  const drawFrame = (index: number) => {
+    const canvas = canvasRef.current;
+    const img = imagesRef.current[index];
+    if (!canvas || !img || !img.complete) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  };
+
+  // --- Preload all frames ---
+  useEffect(() => {
+    imagesRef.current = Array.from({ length: TOTAL_FRAMES }, (_, i) => {
+      const img = new Image();
+      img.src = FRAME_PATH(i + 1);
+      img.onload = () => {
+        setLoadedCount((c) => {
+          const next = c + 1;
+          // Draw the first frame as soon as it's ready
+          if (i === 0) drawFrame(0);
+          if (next >= TOTAL_FRAMES) isReadyRef.current = true;
+          return next;
+        });
+      };
+      return img;
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // --- Size canvas to 52% of viewport, centered, aspect-locked ---
+  useEffect(() => {
+    const resize = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const vw = window.innerWidth;
+      const w = Math.round(vw * 0.52);
+      const h = Math.round(w * (720 / 1280)); // native 16:9 ratio
+      canvas.width = w;
+      canvas.height = h;
+      // Redraw current frame after resize
+      drawFrame(frameRef.current.current);
+    };
+    resize();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // --- GSAP ScrollTrigger: scrub frame index + text ---
   useEffect(() => {
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top top",
-          end: "+=250%",
-          scrub: 1.2,
-          pin: true,
-          anticipatePin: 1,
+      // Proxy object that GSAP will tween
+      const proxy = { frame: 0 };
+
+      ScrollTrigger.create({
+        trigger: sectionRef.current,
+        start: "top top",
+        end: "+=280%",
+        scrub: 0.5,
+        pin: true,
+        anticipatePin: 1,
+        onUpdate: (self) => {
+          const progress = self.progress;
+          const targetFrame = Math.min(
+            Math.floor(progress * (TOTAL_FRAMES - 1)),
+            TOTAL_FRAMES - 1
+          );
+
+          if (targetFrame !== frameRef.current.current) {
+            frameRef.current.current = targetFrame;
+            drawFrame(targetFrame);
+          }
+
+          // Text visibility based on progress
+          const eRef = eyebrowRef.current;
+          const hRef = headlineRef.current;
+          const sRef = sublineRef.current;
+          const scRef = scanRef.current;
+
+          if (eRef && hRef && sRef && scRef) {
+            // Eyebrow: fade in 5%→15%, hold, fade out 70%→80%
+            const eyeIn = smoothStep(0.05, 0.15, progress);
+            const eyeOut = 1 - smoothStep(0.70, 0.80, progress);
+            eRef.style.opacity = String(Math.min(eyeIn, eyeOut));
+
+            // Headline: fade in 10%→22%, fade out 72%→83%
+            const headIn = smoothStep(0.10, 0.22, progress);
+            const headOut = 1 - smoothStep(0.72, 0.83, progress);
+            hRef.style.opacity = String(Math.min(headIn, headOut));
+            hRef.style.transform = `translateY(${lerp(24, 0, Math.min(headIn, 1))}px)`;
+
+            // Scan + subline: fade in 25%→38%, fade out 74%→85%
+            const subIn = smoothStep(0.25, 0.38, progress);
+            const subOut = 1 - smoothStep(0.74, 0.85, progress);
+            const subAlpha = Math.min(subIn, subOut);
+            scRef.style.transform = `scaleX(${Math.min(subIn, 1)})`;
+            scRef.style.opacity = String(subAlpha);
+            sRef.style.opacity = String(subAlpha);
+          }
         },
       });
-
-      // Phase 1 (0 → 30%): Video rises from dim, scales up from 0.3 → 0.52
-      tl.fromTo(
-        videoWrapRef.current,
-        { scale: 0.28, opacity: 0, y: 60 },
-        { scale: 0.52, opacity: 1, y: 0, ease: "power2.out", duration: 3 },
-        0
-      )
-        // Overlay fades out as video comes in
-        .fromTo(
-          overlayRef.current,
-          { opacity: 1 },
-          { opacity: 0.15, ease: "power1.out", duration: 3 },
-          0
-        )
-        // Eyebrow fades in early
-        .fromTo(
-          eyebrowRef.current,
-          { opacity: 0, letterSpacing: "0.3em" },
-          { opacity: 1, letterSpacing: "0.15em", ease: "power2.out", duration: 2.5 },
-          0.5
-        )
-        // Headline chars slide up
-        .fromTo(
-          headlineRef.current,
-          { opacity: 0, y: 32 },
-          { opacity: 1, y: 0, ease: "power3.out", duration: 2.5 },
-          1
-        )
-
-        // Phase 2 (30 → 60%): Hold — video gently breathes, scanline sweeps
-        .to(videoWrapRef.current, { scale: 0.54, ease: "sine.inOut", duration: 2 }, 3.5)
-        .fromTo(
-          scanlineRef.current,
-          { scaleX: 0, opacity: 0 },
-          { scaleX: 1, opacity: 1, ease: "power2.inOut", duration: 2 },
-          3.5
-        )
-        .fromTo(
-          sublineRef.current,
-          { opacity: 0, y: 16 },
-          { opacity: 1, y: 0, ease: "power2.out", duration: 2 },
-          4
-        )
-
-        // Phase 3 (60 → 100%): Video scales past, text burns out — cinematic exit
-        .to(
-          videoWrapRef.current,
-          { scale: 0.68, opacity: 0.4, ease: "power3.in", duration: 3 },
-          6
-        )
-        .to(
-          [eyebrowRef.current, headlineRef.current, sublineRef.current, scanlineRef.current],
-          { opacity: 0, y: -20, ease: "power2.in", duration: 2, stagger: 0.1 },
-          6.2
-        )
-        .to(
-          overlayRef.current,
-          { opacity: 0.85, ease: "power2.in", duration: 3 },
-          6
-        );
     }, sectionRef);
 
     return () => ctx.revert();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pct = Math.round((loadedCount / TOTAL_FRAMES) * 100);
 
   return (
     <section
       ref={sectionRef}
-      className="relative w-full h-screen bg-[#030304] overflow-hidden flex flex-col items-center justify-center"
+      className="relative w-full h-screen overflow-hidden bg-[#030304] flex items-center justify-center"
     >
-      {/* Dark overlay — fades in/out to control exposure */}
-      <div
-        ref={overlayRef}
-        className="absolute inset-0 bg-[#030304] z-10 pointer-events-none"
+      {/* Loading bar */}
+      {loadedCount < TOTAL_FRAMES && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-[#030304]">
+          <div className="w-48 h-px bg-white/10 relative overflow-hidden">
+            <div
+              className="absolute inset-y-0 left-0 bg-white/40 transition-all duration-100"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <span className="text-[10px] tracking-[0.2em] text-white/20 uppercase">
+            {pct}%
+          </span>
+        </div>
+      )}
+
+      {/* Canvas — centered, mix-blend-mode: hard-light, 52% viewport width */}
+      <canvas
+        ref={canvasRef}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+        style={{ mixBlendMode: "hard-light" }}
       />
 
-      {/* Subtle grain texture */}
+      {/* Grain overlay */}
       <div
-        className="absolute inset-0 z-20 pointer-events-none opacity-[0.035]"
+        aria-hidden
+        className="absolute inset-0 pointer-events-none z-10 opacity-[0.04]"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          backgroundRepeat: "repeat",
-          backgroundSize: "128px 128px",
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          backgroundSize: "160px 160px",
         }}
       />
 
-      {/* Video — centered, hard-light blend, 52% scale via wrapper */}
-      <div
-        ref={videoWrapRef}
-        className="absolute inset-0 flex items-center justify-center z-30"
-        style={{ transform: "scale(0.28)", opacity: 0 }}
-      >
-        <video
-          ref={videoRef}
-          src="/piston.mp4"
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="w-full h-full object-contain"
-          style={{ mixBlendMode: "hard-light" }}
-        />
-      </div>
-
-      {/* Text layer — sits above video */}
-      <div className="relative z-40 flex flex-col items-center text-center px-6 select-none pointer-events-none">
+      {/* Text layer */}
+      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center pointer-events-none select-none px-6">
         {/* Eyebrow */}
         <div
           ref={eyebrowRef}
-          className="opacity-0 mb-6 text-[10px] font-light tracking-[0.3em] text-white/40 uppercase"
+          style={{ opacity: 0 }}
+          className="mb-6 text-[10px] font-light tracking-[0.25em] text-white/40 uppercase"
         >
           Auto Nexxus &nbsp;·&nbsp; GMS Platform
         </div>
@@ -146,38 +182,46 @@ export default function HeroSection() {
         {/* Headline */}
         <div
           ref={headlineRef}
-          className="opacity-0"
+          style={{ opacity: 0, transform: "translateY(24px)" }}
         >
-          <h1 className="text-[clamp(2.5rem,6vw,6rem)] font-extralight leading-[1.05] tracking-[-0.02em] text-white/90">
+          <h1 className="text-[clamp(2.2rem,5.5vw,5.5rem)] font-extralight leading-[1.06] tracking-[-0.02em] text-white/90">
             Built for every
             <br />
             <span className="font-semibold text-white">garage in motion.</span>
           </h1>
         </div>
 
-        {/* Scanline divider */}
+        {/* Scanline */}
         <div
-          ref={scanlineRef}
-          className="my-8 w-24 h-px bg-white/20 origin-left scale-x-0 opacity-0"
+          ref={scanRef}
+          style={{ opacity: 0, transform: "scaleX(0)", transformOrigin: "left" }}
+          className="my-7 w-20 h-px bg-white/20"
         />
 
-        {/* Sub-line */}
-        <div
-          ref={sublineRef}
-          className="opacity-0 max-w-sm"
-        >
-          <p className="text-[13px] font-light leading-relaxed text-white/35 tracking-wide">
+        {/* Subline */}
+        <div ref={sublineRef} style={{ opacity: 0 }} className="max-w-xs">
+          <p className="text-[12px] font-light leading-relaxed text-white/35 tracking-wide">
             Service management, vehicle tracking, and technician ops —
             unified in one cloud platform.
           </p>
         </div>
       </div>
 
-      {/* Bottom scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2 opacity-40">
-        <span className="text-[10px] tracking-[0.2em] text-white/50 uppercase">Scroll</span>
-        <div className="w-px h-8 bg-white/30 animate-pulse" />
+      {/* Scroll hint */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2">
+        <span className="text-[9px] tracking-[0.25em] text-white/30 uppercase">Scroll</span>
+        <div className="w-px h-7 bg-white/20 animate-pulse" />
       </div>
     </section>
   );
+}
+
+// --- Utility ---
+function smoothStep(edge0: number, edge1: number, x: number): number {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * Math.min(1, Math.max(0, t));
 }
