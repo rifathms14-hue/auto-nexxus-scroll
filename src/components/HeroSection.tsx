@@ -199,14 +199,8 @@ export default function HeroSection() {
 
         <p
           ref={s1Body}
-          className="text-[16px] md:text-[18px] font-light leading-[1.6]"
-          style={{
-            fontFamily: "var(--font-blender), sans-serif",
-            color: "hsla(0, 0%, 100%, 1)",
-            opacity: 0,
-            filter: "blur(20px)",
-            willChange: "opacity, filter, transform",
-          }}
+          className="hidden"
+          style={{ opacity: 0 }}
         >
           From forged internals to friction-optimized engineering, performance
           here isn&apos;t added later — it&apos;s built into the foundation from
@@ -218,7 +212,7 @@ export default function HeroSection() {
           TEXT SET 2 — bottom-right
           Appears: scroll 4 | Disappears: scroll 6
       ══════════════════════════════════════════════════════ */}
-      <div className="absolute bottom-12 right-12 z-30 max-w-[280px] md:max-w-[340px] flex flex-col gap-3 items-end text-right pointer-events-none select-none">
+      <div className="absolute bottom-12 right-12 z-30 max-w-[280px] md:max-w-[340px] flex flex-col gap-3 pointer-events-none select-none">
         <p
           ref={s2Eyebrow}
           className="text-[18px] md:text-[24px] font-medium leading-[1.2] uppercase md:normal-case"
@@ -249,14 +243,8 @@ export default function HeroSection() {
 
         <p
           ref={s2Body}
-          className="text-[16px] md:text-[18px] font-light leading-[1.6]"
-          style={{
-            fontFamily: "var(--font-blender), sans-serif",
-            color: "hsla(0, 0%, 100%, 1)",
-            opacity: 0,
-            filter: "blur(20px)",
-            willChange: "opacity, filter, transform",
-          }}
+          className="hidden"
+          style={{ opacity: 0 }}
         >
           Race-bred precision tuned for the street.
           <br />
