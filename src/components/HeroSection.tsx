@@ -254,7 +254,7 @@ export default function HeroSection() {
       </div>
 
       {/* ── Scroll hint ──────────────────────────────────────── */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 pointer-events-none">
+      <div className="hidden absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 pointer-events-none">
         <span
           style={{ fontFamily: "var(--font-blender), sans-serif", fontWeight: 300 }}
           className="text-[9px] tracking-[0.25em] text-white/25 uppercase"
