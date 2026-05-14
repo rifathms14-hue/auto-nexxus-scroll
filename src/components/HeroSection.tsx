@@ -168,14 +168,12 @@ export default function HeroSection() {
           TEXT SET 1 — top-left
           Appears: scroll 1 | Disappears: scroll 3
       ══════════════════════════════════════════════════════ */}
-      <div className="absolute top-12 left-12 z-30 max-w-[340px] flex flex-col gap-3 pointer-events-none select-none">
+      <div className="absolute top-12 left-12 z-30 max-w-[280px] md:max-w-[340px] flex flex-col gap-3 pointer-events-none select-none">
         <p
           ref={s1Eyebrow}
+          className="text-[18px] md:text-[24px] font-medium leading-[1.2] uppercase md:normal-case"
           style={{
             fontFamily: "var(--font-blender), sans-serif",
-            fontWeight: 500,
-            fontSize: "24px",
-            lineHeight: 1.2,
             color: ORANGE,
             opacity: 0,
             filter: "blur(20px)",
@@ -187,11 +185,9 @@ export default function HeroSection() {
 
         <h2
           ref={s1Heading}
+          className="text-[24px] md:text-[36px] font-[800] leading-[1.1]"
           style={{
             fontFamily: "var(--font-blender), sans-serif",
-            fontWeight: 800,
-            fontSize: "36px",
-            lineHeight: 1.1,
             color: "hsla(0, 0%, 100%, 0.92)",
             opacity: 0,
             filter: "blur(20px)",
@@ -203,11 +199,9 @@ export default function HeroSection() {
 
         <p
           ref={s1Body}
+          className="text-[16px] md:text-[18px] font-light leading-[1.6]"
           style={{
             fontFamily: "var(--font-blender), sans-serif",
-            fontWeight: 300,
-            fontSize: "18px",
-            lineHeight: 1.6,
             color: "hsla(0, 0%, 100%, 1)",
             opacity: 0,
             filter: "blur(20px)",
@@ -224,14 +218,12 @@ export default function HeroSection() {
           TEXT SET 2 — bottom-right
           Appears: scroll 4 | Disappears: scroll 6
       ══════════════════════════════════════════════════════ */}
-      <div className="absolute bottom-12 right-12 z-30 max-w-[340px] flex flex-col gap-3 items-end text-right pointer-events-none select-none">
+      <div className="absolute bottom-12 right-12 z-30 max-w-[280px] md:max-w-[340px] flex flex-col gap-3 items-end text-right pointer-events-none select-none">
         <p
           ref={s2Eyebrow}
+          className="text-[18px] md:text-[24px] font-medium leading-[1.2] uppercase md:normal-case"
           style={{
             fontFamily: "var(--font-blender), sans-serif",
-            fontWeight: 500,
-            fontSize: "24px",
-            lineHeight: 1.2,
             color: ORANGE,
             opacity: 0,
             filter: "blur(20px)",
@@ -243,11 +235,9 @@ export default function HeroSection() {
 
         <h2
           ref={s2Heading}
+          className="text-[24px] md:text-[36px] font-[800] leading-[1.1]"
           style={{
             fontFamily: "var(--font-blender), sans-serif",
-            fontWeight: 800,
-            fontSize: "36px",
-            lineHeight: 1.1,
             color: "hsla(0, 0%, 100%, 0.92)",
             opacity: 0,
             filter: "blur(20px)",
@@ -259,11 +249,9 @@ export default function HeroSection() {
 
         <p
           ref={s2Body}
+          className="text-[16px] md:text-[18px] font-light leading-[1.6]"
           style={{
             fontFamily: "var(--font-blender), sans-serif",
-            fontWeight: 300,
-            fontSize: "18px",
-            lineHeight: 1.6,
             color: "hsla(0, 0%, 100%, 1)",
             opacity: 0,
             filter: "blur(20px)",
