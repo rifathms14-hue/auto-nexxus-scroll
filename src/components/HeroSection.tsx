@@ -67,12 +67,15 @@ export default function HeroSection() {
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Size canvas: 52vw centered, 16:9 aspect ───────────────────
+  // ── Size canvas: full-width on mobile, 52vw on desktop ──────────
   useEffect(() => {
     const resize = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const w = Math.round(window.innerWidth * 0.52);
+      const isMobile = window.innerWidth < 768;
+      const w = isMobile
+        ? window.innerWidth
+        : Math.round(window.innerWidth * 0.52);
       const h = Math.round(w * (720 / 1280));
       canvas.width  = w;
       canvas.height = h;
@@ -169,7 +172,7 @@ export default function HeroSection() {
         <p
           ref={s1Eyebrow}
           style={{
-            fontFamily: "'Blender', sans-serif",
+            fontFamily: "var(--font-blender), sans-serif",
             fontWeight: 500,
             fontSize: "24px",
             lineHeight: 1.2,
@@ -185,7 +188,7 @@ export default function HeroSection() {
         <h2
           ref={s1Heading}
           style={{
-            fontFamily: "'Blender', sans-serif",
+            fontFamily: "var(--font-blender), sans-serif",
             fontWeight: 800,
             fontSize: "36px",
             lineHeight: 1.1,
@@ -201,7 +204,7 @@ export default function HeroSection() {
         <p
           ref={s1Body}
           style={{
-            fontFamily: "'Blender', sans-serif",
+            fontFamily: "var(--font-blender), sans-serif",
             fontWeight: 300,
             fontSize: "18px",
             lineHeight: 1.6,
@@ -225,7 +228,7 @@ export default function HeroSection() {
         <p
           ref={s2Eyebrow}
           style={{
-            fontFamily: "'Blender', sans-serif",
+            fontFamily: "var(--font-blender), sans-serif",
             fontWeight: 500,
             fontSize: "24px",
             lineHeight: 1.2,
@@ -241,7 +244,7 @@ export default function HeroSection() {
         <h2
           ref={s2Heading}
           style={{
-            fontFamily: "'Blender', sans-serif",
+            fontFamily: "var(--font-blender), sans-serif",
             fontWeight: 800,
             fontSize: "36px",
             lineHeight: 1.1,
@@ -257,7 +260,7 @@ export default function HeroSection() {
         <p
           ref={s2Body}
           style={{
-            fontFamily: "'Blender', sans-serif",
+            fontFamily: "var(--font-blender), sans-serif",
             fontWeight: 300,
             fontSize: "18px",
             lineHeight: 1.6,
@@ -277,7 +280,7 @@ export default function HeroSection() {
       {/* ── Scroll hint ──────────────────────────────────────── */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 pointer-events-none">
         <span
-          style={{ fontFamily: "'Blender', sans-serif", fontWeight: 300 }}
+          style={{ fontFamily: "var(--font-blender), sans-serif", fontWeight: 300 }}
           className="text-[9px] tracking-[0.25em] text-white/25 uppercase"
         >
           Scroll

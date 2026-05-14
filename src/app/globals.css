@@ -1,43 +1,5 @@
 @import "tailwindcss";
 
-/* ─── Blender Pro font family ─────────────────────────────── */
-@font-face {
-  font-family: 'Blender';
-  src: url('/fonts/BlenderTrial-Thin.otf') format('opentype');
-  font-weight: 100;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Blender';
-  src: url('/fonts/BlenderTrial-Book.otf') format('opentype');
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Blender';
-  src: url('/fonts/BlenderTrial-Medium.otf') format('opentype');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Blender';
-  src: url('/fonts/BlenderTrial-Bold.otf') format('opentype');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Blender';
-  src: url('/fonts/BlenderTrial-Strong.otf') format('opentype');
-  font-weight: 800;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* ─── Base ─────────────────────────────────────────────────── */
 :root {
   --background: #030304;
   --foreground: #ffffff;
@@ -51,7 +13,6 @@ body {
   background: #030304;
   color: #ffffff;
   overflow-x: hidden;
-  font-family: 'Blender', system-ui, sans-serif;
 }
 
 /* ─── Lenis smooth scroll ───────────────────────────────────── */
