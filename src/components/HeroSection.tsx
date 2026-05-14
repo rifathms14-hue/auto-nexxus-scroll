@@ -10,60 +10,72 @@ const TOTAL_FRAMES = 193;
 const FRAME_PATH = (i: number) =>
   `/frames/frame_${String(i).padStart(4, "0")}.jpg`;
 
+// ─── Scroll progress windows (6 scroll units across 500% total) ─────────────
+// 1 unit ≈ 16.67% of total progress
+//
+// Set 1 (top-left):  reveal scroll 1 → fade scroll 3
+// Set 2 (bottom-right): reveal scroll 4 → fade scroll 6
+
+const TEXT_WINDOWS = {
+  set1: { revealS: 0.02, revealE: 0.14, fadeS: 0.38, fadeE: 0.50 },
+  set2: { revealS: 0.54, revealE: 0.66, fadeS: 0.88, fadeE: 0.98 },
+} as const;
+
+// ─── Orange accent colour ─────────────────────────────────────────────────────
+const ORANGE = "hsla(24, 100%, 50%, 1)";
+
 export default function HeroSection() {
   const sectionRef = useRef<HTMLElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const frameRef = useRef({ current: 0 });
-  const imagesRef = useRef<HTMLImageElement[]>([]);
+  const canvasRef  = useRef<HTMLCanvasElement>(null);
+  const frameRef   = useRef({ current: 0 });
+  const imagesRef  = useRef<HTMLImageElement[]>([]);
   const [loadedCount, setLoadedCount] = useState(0);
-  const isReadyRef = useRef(false);
 
-  // --- Text refs ---
-  const eyebrowRef = useRef<HTMLDivElement>(null);
-  const headlineRef = useRef<HTMLDivElement>(null);
-  const sublineRef = useRef<HTMLDivElement>(null);
-  const scanRef = useRef<HTMLDivElement>(null);
+  // ── Text set 1 refs ──────────────────────────────────────────
+  const s1Eyebrow = useRef<HTMLParagraphElement>(null);
+  const s1Heading = useRef<HTMLHeadingElement>(null);
+  const s1Body    = useRef<HTMLParagraphElement>(null);
 
-  // --- Draw a specific frame index to canvas ---
+  // ── Text set 2 refs ──────────────────────────────────────────
+  const s2Eyebrow = useRef<HTMLParagraphElement>(null);
+  const s2Heading = useRef<HTMLHeadingElement>(null);
+  const s2Body    = useRef<HTMLParagraphElement>(null);
+
+  // ── Draw frame to canvas ──────────────────────────────────────
   const drawFrame = (index: number) => {
     const canvas = canvasRef.current;
-    const img = imagesRef.current[index];
-    if (!canvas || !img || !img.complete) return;
+    const img    = imagesRef.current[index];
+    if (!canvas || !img?.complete) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   };
 
-  // --- Preload all frames ---
+  // ── Preload all frames ────────────────────────────────────────
   useEffect(() => {
     imagesRef.current = Array.from({ length: TOTAL_FRAMES }, (_, i) => {
       const img = new Image();
       img.src = FRAME_PATH(i + 1);
       img.onload = () => {
         setLoadedCount((c) => {
-          const next = c + 1;
-          // Draw the first frame as soon as it's ready
           if (i === 0) drawFrame(0);
-          if (next >= TOTAL_FRAMES) isReadyRef.current = true;
-          return next;
+          return c + 1;
         });
       };
       return img;
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // --- Size canvas to 52% of viewport, centered, aspect-locked ---
+  // ── Size canvas: 52vw centered, 16:9 aspect ───────────────────
   useEffect(() => {
     const resize = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const vw = window.innerWidth;
-      const w = Math.round(vw * 0.52);
-      const h = Math.round(w * (720 / 1280)); // native 16:9 ratio
-      canvas.width = w;
+      const w = Math.round(window.innerWidth * 0.52);
+      const h = Math.round(w * (720 / 1280));
+      canvas.width  = w;
       canvas.height = h;
-      // Redraw current frame after resize
       drawFrame(frameRef.current.current);
     };
     resize();
@@ -71,57 +83,38 @@ export default function HeroSection() {
     return () => window.removeEventListener("resize", resize);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // --- GSAP ScrollTrigger: scrub frame index + text ---
+  // ── GSAP ScrollTrigger ────────────────────────────────────────
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Proxy object that GSAP will tween
-      const proxy = { frame: 0 };
-
       ScrollTrigger.create({
         trigger: sectionRef.current,
         start: "top top",
-        end: "+=280%",
-        scrub: 0.5,
+        end: "+=500%",          // 6 scroll units
+        scrub: 0.6,
         pin: true,
         anticipatePin: 1,
         onUpdate: (self) => {
-          const progress = self.progress;
-          const targetFrame = Math.min(
-            Math.floor(progress * (TOTAL_FRAMES - 1)),
+          const p = self.progress;
+
+          // ── Frame scrubbing ─────────────────────────────────
+          const target = Math.min(
+            Math.floor(p * (TOTAL_FRAMES - 1)),
             TOTAL_FRAMES - 1
           );
-
-          if (targetFrame !== frameRef.current.current) {
-            frameRef.current.current = targetFrame;
-            drawFrame(targetFrame);
+          if (target !== frameRef.current.current) {
+            frameRef.current.current = target;
+            drawFrame(target);
           }
 
-          // Text visibility based on progress
-          const eRef = eyebrowRef.current;
-          const hRef = headlineRef.current;
-          const sRef = sublineRef.current;
-          const scRef = scanRef.current;
+          // ── Text set 1 ──────────────────────────────────────
+          applyBlurTransition(s1Eyebrow.current, p, TEXT_WINDOWS.set1, 0);
+          applyBlurTransition(s1Heading.current, p, TEXT_WINDOWS.set1, 1);
+          applyBlurTransition(s1Body.current,    p, TEXT_WINDOWS.set1, 2);
 
-          if (eRef && hRef && sRef && scRef) {
-            // Eyebrow: fade in 5%→15%, hold, fade out 70%→80%
-            const eyeIn = smoothStep(0.05, 0.15, progress);
-            const eyeOut = 1 - smoothStep(0.70, 0.80, progress);
-            eRef.style.opacity = String(Math.min(eyeIn, eyeOut));
-
-            // Headline: fade in 10%→22%, fade out 72%→83%
-            const headIn = smoothStep(0.10, 0.22, progress);
-            const headOut = 1 - smoothStep(0.72, 0.83, progress);
-            hRef.style.opacity = String(Math.min(headIn, headOut));
-            hRef.style.transform = `translateY(${lerp(24, 0, Math.min(headIn, 1))}px)`;
-
-            // Scan + subline: fade in 25%→38%, fade out 74%→85%
-            const subIn = smoothStep(0.25, 0.38, progress);
-            const subOut = 1 - smoothStep(0.74, 0.85, progress);
-            const subAlpha = Math.min(subIn, subOut);
-            scRef.style.transform = `scaleX(${Math.min(subIn, 1)})`;
-            scRef.style.opacity = String(subAlpha);
-            sRef.style.opacity = String(subAlpha);
-          }
+          // ── Text set 2 ──────────────────────────────────────
+          applyBlurTransition(s2Eyebrow.current, p, TEXT_WINDOWS.set2, 0);
+          applyBlurTransition(s2Heading.current, p, TEXT_WINDOWS.set2, 1);
+          applyBlurTransition(s2Body.current,    p, TEXT_WINDOWS.set2, 2);
         },
       });
     }, sectionRef);
@@ -134,14 +127,14 @@ export default function HeroSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative w-full h-screen overflow-hidden bg-[#030304] flex items-center justify-center"
+      className="relative w-full h-screen overflow-hidden bg-[#030304]"
     >
-      {/* Loading bar */}
+      {/* ── Loading bar ─────────────────────────────────────── */}
       {loadedCount < TOTAL_FRAMES && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-[#030304]">
           <div className="w-48 h-px bg-white/10 relative overflow-hidden">
             <div
-              className="absolute inset-y-0 left-0 bg-white/40 transition-all duration-100"
+              className="absolute inset-y-0 left-0 bg-white/30 transition-all duration-75"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -151,77 +144,189 @@ export default function HeroSection() {
         </div>
       )}
 
-      {/* Canvas — centered, mix-blend-mode: hard-light, 52% viewport width */}
+      {/* ── Canvas — centered, 52vw, hard-light ─────────────── */}
       <canvas
         ref={canvasRef}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10"
         style={{ mixBlendMode: "hard-light" }}
       />
 
-      {/* Grain overlay */}
+      {/* ── Film grain ──────────────────────────────────────── */}
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none z-10 opacity-[0.04]"
+        className="absolute inset-0 pointer-events-none z-20 opacity-[0.035]"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
           backgroundSize: "160px 160px",
         }}
       />
 
-      {/* Text layer */}
-      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center pointer-events-none select-none px-6">
-        {/* Eyebrow */}
-        <div
-          ref={eyebrowRef}
-          style={{ opacity: 0 }}
-          className="mb-6 text-[10px] font-light tracking-[0.25em] text-white/40 uppercase"
+      {/* ══════════════════════════════════════════════════════
+          TEXT SET 1 — top-left
+          Appears: scroll 1 | Disappears: scroll 3
+      ══════════════════════════════════════════════════════ */}
+      <div className="absolute top-12 left-12 z-30 max-w-[340px] flex flex-col gap-3 pointer-events-none select-none">
+        <p
+          ref={s1Eyebrow}
+          style={{
+            fontFamily: "'Blender', sans-serif",
+            fontWeight: 500,
+            fontSize: "24px",
+            lineHeight: 1.2,
+            color: ORANGE,
+            opacity: 0,
+            filter: "blur(20px)",
+            willChange: "opacity, filter, transform",
+          }}
         >
-          Auto Nexxus &nbsp;·&nbsp; GMS Platform
-        </div>
+          Precision, Layer by Layer
+        </p>
 
-        {/* Headline */}
-        <div
-          ref={headlineRef}
-          style={{ opacity: 0, transform: "translateY(24px)" }}
+        <h2
+          ref={s1Heading}
+          style={{
+            fontFamily: "'Blender', sans-serif",
+            fontWeight: 800,
+            fontSize: "36px",
+            lineHeight: 1.1,
+            color: "hsla(0, 0%, 100%, 0.92)",
+            opacity: 0,
+            filter: "blur(20px)",
+            willChange: "opacity, filter, transform",
+          }}
         >
-          <h1 className="text-[clamp(2.2rem,5.5vw,5.5rem)] font-extralight leading-[1.06] tracking-[-0.02em] text-white/90">
-            Built for every
-            <br />
-            <span className="font-semibold text-white">garage in motion.</span>
-          </h1>
-        </div>
+          Every component inside the RC&nbsp;390 engine exists for a reason.
+        </h2>
 
-        {/* Scanline */}
-        <div
-          ref={scanRef}
-          style={{ opacity: 0, transform: "scaleX(0)", transformOrigin: "left" }}
-          className="my-7 w-20 h-px bg-white/20"
-        />
-
-        {/* Subline */}
-        <div ref={sublineRef} style={{ opacity: 0 }} className="max-w-xs">
-          <p className="text-[12px] font-light leading-relaxed text-white/35 tracking-wide">
-            Service management, vehicle tracking, and technician ops —
-            unified in one cloud platform.
-          </p>
-        </div>
+        <p
+          ref={s1Body}
+          style={{
+            fontFamily: "'Blender', sans-serif",
+            fontWeight: 300,
+            fontSize: "18px",
+            lineHeight: 1.6,
+            color: "hsla(0, 0%, 100%, 1)",
+            opacity: 0,
+            filter: "blur(20px)",
+            willChange: "opacity, filter, transform",
+          }}
+        >
+          From forged internals to friction-optimized engineering, performance
+          here isn&apos;t added later — it&apos;s built into the foundation from
+          the very first movement.
+        </p>
       </div>
 
-      {/* Scroll hint */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2">
-        <span className="text-[9px] tracking-[0.25em] text-white/30 uppercase">Scroll</span>
-        <div className="w-px h-7 bg-white/20 animate-pulse" />
+      {/* ══════════════════════════════════════════════════════
+          TEXT SET 2 — bottom-right
+          Appears: scroll 4 | Disappears: scroll 6
+      ══════════════════════════════════════════════════════ */}
+      <div className="absolute bottom-12 right-12 z-30 max-w-[340px] flex flex-col gap-3 items-end text-right pointer-events-none select-none">
+        <p
+          ref={s2Eyebrow}
+          style={{
+            fontFamily: "'Blender', sans-serif",
+            fontWeight: 500,
+            fontSize: "24px",
+            lineHeight: 1.2,
+            color: ORANGE,
+            opacity: 0,
+            filter: "blur(20px)",
+            willChange: "opacity, filter, transform",
+          }}
+        >
+          Engineered to Stay Aggressive
+        </p>
+
+        <h2
+          ref={s2Heading}
+          style={{
+            fontFamily: "'Blender', sans-serif",
+            fontWeight: 800,
+            fontSize: "36px",
+            lineHeight: 1.1,
+            color: "hsla(0, 0%, 100%, 0.92)",
+            opacity: 0,
+            filter: "blur(20px)",
+            willChange: "opacity, filter, transform",
+          }}
+        >
+          Lightweight architecture.&nbsp;High&#8209;revving response.
+        </h2>
+
+        <p
+          ref={s2Body}
+          style={{
+            fontFamily: "'Blender', sans-serif",
+            fontWeight: 300,
+            fontSize: "18px",
+            lineHeight: 1.6,
+            color: "hsla(0, 0%, 100%, 1)",
+            opacity: 0,
+            filter: "blur(20px)",
+            willChange: "opacity, filter, transform",
+          }}
+        >
+          Race-bred precision tuned for the street.
+          <br />
+          This isn&apos;t just an engine being assembled. It&apos;s performance
+          being engineered in real time.
+        </p>
+      </div>
+
+      {/* ── Scroll hint ──────────────────────────────────────── */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 pointer-events-none">
+        <span
+          style={{ fontFamily: "'Blender', sans-serif", fontWeight: 300 }}
+          className="text-[9px] tracking-[0.25em] text-white/25 uppercase"
+        >
+          Scroll
+        </span>
+        <div className="w-px h-7 bg-white/15 animate-pulse" />
       </div>
     </section>
   );
 }
 
-// --- Utility ---
+// ─── Blur transition helper ────────────────────────────────────────────────────
+// Drives opacity, blur, and a subtle Y shift purely from scroll progress.
+// staggerIndex staggers each element slightly so they don't reveal in unison.
+
+function applyBlurTransition(
+  el: HTMLElement | null,
+  p: number,
+  window: { revealS: number; revealE: number; fadeS: number; fadeE: number },
+  staggerIndex: number
+) {
+  if (!el) return;
+
+  const lag = staggerIndex * 0.018; // stagger per element
+
+  const revealT = smoothStep(window.revealS + lag, window.revealE + lag, p);
+  const fadeT   = smoothStep(window.fadeS,          window.fadeE,          p);
+
+  // Opacity: ramp up on reveal, ramp down on fade
+  const opacity = revealT * (1 - fadeT);
+
+  // Blur: 20px → 0 on reveal, 0 → 20px on fade
+  const blur = lerp(20, 0, revealT) + lerp(0, 20, fadeT);
+
+  // Subtle vertical shift: lifts in on reveal, drifts up slightly on fade
+  const yIn  = lerp(14, 0, revealT);
+  const yOut = lerp(0, -8, fadeT);
+  const y    = yIn + yOut;
+
+  el.style.opacity   = String(Math.max(0, Math.min(1, opacity)));
+  el.style.filter    = `blur(${blur.toFixed(2)}px)`;
+  el.style.transform = `translateY(${y.toFixed(2)}px)`;
+}
+
+// ─── Math utils ───────────────────────────────────────────────────────────────
 function smoothStep(edge0: number, edge1: number, x: number): number {
   const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
   return t * t * (3 - 2 * t);
 }
 
 function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * Math.min(1, Math.max(0, t));
+  return a + (b - a) * t;
 }
