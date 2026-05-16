@@ -168,7 +168,7 @@ export default function HeroSection() {
           TEXT SET 1 — top-left
           Appears: scroll 1 | Disappears: scroll 3
       ══════════════════════════════════════════════════════ */}
-      <div className="absolute top-12 left-12 z-30 max-w-[280px] md:max-w-[340px] flex flex-col gap-3 pointer-events-none select-none">
+      <div className="absolute top-12 md:top-[160px] left-12 md:left-[200px] z-30 max-w-[280px] md:max-w-[340px] flex flex-col gap-3 pointer-events-none select-none">
         <p
           ref={s1Eyebrow}
           className="text-[18px] md:text-[24px] font-medium leading-[1.2] uppercase md:normal-case"
@@ -212,7 +212,7 @@ export default function HeroSection() {
           TEXT SET 2 — bottom-right
           Appears: scroll 4 | Disappears: scroll 6
       ══════════════════════════════════════════════════════ */}
-      <div className="absolute bottom-12 right-12 z-30 max-w-[280px] md:max-w-[340px] flex flex-col gap-3 pointer-events-none select-none">
+      <div className="absolute bottom-12 md:bottom-[160px] right-12 md:right-[200px] z-30 max-w-[280px] md:max-w-[340px] flex flex-col gap-3 pointer-events-none select-none">
         <p
           ref={s2Eyebrow}
           className="text-[18px] md:text-[24px] font-medium leading-[1.2] uppercase md:normal-case"
