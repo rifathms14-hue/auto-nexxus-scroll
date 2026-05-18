@@ -31,6 +31,8 @@ export default function HeroSection() {
   const imagesRef  = useRef<HTMLImageElement[]>([]);
   const [loadedCount, setLoadedCount] = useState(0);
   const [minDelayDone, setMinDelayDone] = useState(false);
+  // phase: 'loading' → 'banner' → 'scroll'
+  const [phase, setPhase] = useState<"loading" | "banner" | "scroll">("loading");
 
   // ── Text set 1 refs ──────────────────────────────────────────
   const s1Eyebrow = useRef<HTMLParagraphElement>(null);
@@ -59,6 +61,13 @@ export default function HeroSection() {
     const t = setTimeout(() => setMinDelayDone(true), 2000);
     return () => clearTimeout(t);
   }, []);
+
+  // ── Advance loading → banner once frames + delay are ready ──
+  useEffect(() => {
+    if (loadedCount >= TOTAL_FRAMES && minDelayDone && phase === "loading") {
+      setPhase("banner");
+    }
+  }, [loadedCount, minDelayDone, phase]);
 
   // ── Preload all frames ────────────────────────────────────────
   useEffect(() => {
@@ -141,27 +150,44 @@ export default function HeroSection() {
       {/* ── Loading video overlay ───────────────────────────── */}
       <div
         className="absolute inset-0 z-50 bg-[#030304] transition-opacity duration-700"
-        style={{ opacity: loadedCount >= TOTAL_FRAMES && minDelayDone ? 0 : 1, pointerEvents: loadedCount >= TOTAL_FRAMES && minDelayDone ? "none" : "auto" }}
+        style={{ opacity: phase === "loading" ? 1 : 0, pointerEvents: phase === "loading" ? "auto" : "none" }}
       >
         {/* Mobile */}
         <video
           className="block md:hidden w-full h-full object-cover"
-          autoPlay
-          loop
-          muted
-          playsInline
+          autoPlay loop muted playsInline
         >
           <source src="/loading-mobile.mp4" type="video/mp4" />
         </video>
         {/* Desktop */}
         <video
           className="hidden md:block w-full h-full object-cover"
-          autoPlay
-          loop
-          muted
-          playsInline
+          autoPlay loop muted playsInline
         >
           <source src="/loading-desktop.mp4" type="video/mp4" />
+        </video>
+      </div>
+
+      {/* ── Banner video (plays once after loader) ───────────── */}
+      <div
+        className="absolute inset-0 z-40 bg-[#030304] transition-opacity duration-700"
+        style={{ opacity: phase === "banner" ? 1 : 0, pointerEvents: phase === "banner" ? "auto" : "none" }}
+      >
+        {/* Mobile */}
+        <video
+          className="block md:hidden w-full h-full object-cover"
+          autoPlay muted playsInline
+          onEnded={() => setPhase("scroll")}
+        >
+          <source src="/banner-mobile.mp4" type="video/mp4" />
+        </video>
+        {/* Desktop */}
+        <video
+          className="hidden md:block w-full h-full object-cover"
+          autoPlay muted playsInline
+          onEnded={() => setPhase("scroll")}
+        >
+          <source src="/banner-desktop.mp4" type="video/mp4" />
         </video>
       </div>
 
