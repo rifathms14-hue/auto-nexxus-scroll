@@ -17,6 +17,17 @@ const TEXT_WINDOWS = {
 
 const ORANGE = "hsla(24, 100%, 50%, 1)";
 
+const SPEC_CARDS = [
+  { label: "Engine",       value: "373.2 cc",  sub: "Single-cylinder, liquid-cooled" },
+  { label: "Peak Power",   value: "43 HP",      sub: "@ 9,000 rpm" },
+  { label: "Peak Torque",  value: "37 Nm",      sub: "@ 7,000 rpm" },
+  { label: "Dry Weight",   value: "163 kg",     sub: "Race-ready kerb" },
+  { label: "Suspension",   value: "WP APEX",    sub: "43 mm USD forks" },
+  { label: "Brakes",       value: "Bybre",      sub: "320 mm front disc" },
+  { label: "Frame",        value: "Chromoly",   sub: "Trellis steel" },
+  { label: "Transmission", value: "6-speed",    sub: "Quickshifter+ ready" },
+];
+
 export default function HeroSection() {
   // ── Canvas / frame refs ───────────────────────────────────
   const engineRef      = useRef<HTMLElement>(null);
@@ -198,37 +209,44 @@ export default function HeroSection() {
 
         {/* ── Text + CTA ───────────────────────────────────── */}
         <div
-          className="absolute z-20 bottom-[140px] md:bottom-[160px] left-8 md:left-[200px] flex flex-col gap-4 max-w-[320px] md:max-w-[520px] select-none transition-all duration-1000"
-          style={{ opacity: heroTextVisible ? 1 : 0, transform: heroTextVisible ? "translateY(0px)" : "translateY(16px)" }}
+          className="absolute z-20 bottom-[140px] md:bottom-[160px] flex flex-col gap-4 select-none transition-all duration-1000"
+          style={{
+            left: "20px",
+            right: "20px",
+            opacity: heroTextVisible ? 1 : 0,
+            transform: heroTextVisible ? "translateY(0px)" : "translateY(16px)",
+          }}
         >
-          <p
-            className="text-[11px] md:text-[13px] font-medium tracking-[0.25em] uppercase"
-            style={{ fontFamily: "var(--font-blender), sans-serif", color: ORANGE }}
-          >
-            KTM RC 390
-          </p>
-
           <h1
-            className="text-[36px] md:text-[64px] font-[800] leading-[1.05]"
-            style={{ fontFamily: "var(--font-blender), sans-serif", color: "hsla(0,0%,100%,0.95)" }}
+            className="font-[800] leading-[1.05] break-words"
+            style={{
+              fontFamily: "var(--font-blender), sans-serif",
+              color: "hsla(0,0%,100%,0.95)",
+              fontSize: "clamp(40px, 9.5vw, 96px)",
+            }}
           >
             Born on the Track.
           </h1>
 
           <p
-            className="text-[14px] md:text-[17px] font-light leading-[1.6]"
-            style={{ fontFamily: "var(--font-blender), sans-serif", color: "hsla(0,0%,100%,0.55)" }}
+            className="font-light leading-[1.6] max-w-[480px]"
+            style={{
+              fontFamily: "var(--font-blender), sans-serif",
+              color: "hsla(0,0%,100%,0.55)",
+              fontSize: "18px",
+            }}
           >
             Precision-engineered performance, built layer by layer for those who demand more from every ride.
           </p>
 
           <button
-            className="mt-2 self-start flex items-center gap-3 px-7 py-3 text-[13px] md:text-[14px] font-medium tracking-[0.15em] uppercase transition-all duration-300 hover:gap-5"
+            className="mt-2 self-start flex items-center gap-3 px-7 text-[14px] font-medium tracking-[0.15em] uppercase transition-all duration-300 hover:gap-5"
             style={{
               fontFamily: "var(--font-blender), sans-serif",
               color: "#030304",
               background: ORANGE,
               letterSpacing: "0.15em",
+              height: "56px",
             }}
           >
             Explore
@@ -240,8 +258,8 @@ export default function HeroSection() {
 
         {/* ── Carousel indicator ────────────────────────────── */}
         <div
-          className="absolute z-20 bottom-[60px] md:bottom-[72px] left-8 md:left-[200px] flex items-center gap-2 transition-all duration-1000 delay-200"
-          style={{ opacity: heroTextVisible ? 1 : 0, transform: heroTextVisible ? "translateY(0px)" : "translateY(16px)" }}
+          className="absolute z-20 bottom-[60px] md:bottom-[72px] flex items-center gap-2 transition-all duration-1000 delay-200"
+          style={{ left: "20px", opacity: heroTextVisible ? 1 : 0, transform: heroTextVisible ? "translateY(0px)" : "translateY(16px)" }}
         >
           {[0, 1, 2].map((i) => (
             <div
@@ -332,6 +350,74 @@ export default function HeroSection() {
             This isn&apos;t just an engine being assembled. It&apos;s performance
             being engineered in real time.
           </p>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════
+          SECTION 3 — Specs grid (2 rows × 4 columns)
+      ════════════════════════════════════════════════════════ */}
+      <section className="w-full bg-[#030304] px-[20px] py-16 md:py-24">
+        {/* Section heading */}
+        <div className="mb-10 md:mb-14 flex flex-col gap-2">
+          <p
+            className="text-[11px] md:text-[12px] font-medium tracking-[0.28em] uppercase"
+            style={{ fontFamily: "var(--font-blender), sans-serif", color: ORANGE }}
+          >
+            RC 390 · Technical Specifications
+          </p>
+          <h2
+            className="font-[800] leading-[1.05]"
+            style={{
+              fontFamily: "var(--font-blender), sans-serif",
+              color: "hsla(0,0%,100%,0.92)",
+              fontSize: "clamp(28px, 5vw, 56px)",
+            }}
+          >
+            Built to Spec.
+          </h2>
+        </div>
+
+        {/* 2 × 4 grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-[1px]">
+          {SPEC_CARDS.map((card) => (
+            /* Gradient border wrapper */
+            <div
+              key={card.label}
+              style={{
+                background: "linear-gradient(150deg, #666 0%, #000 100%)",
+                padding: "1px",
+              }}
+            >
+              {/* Card inner */}
+              <div
+                className="flex flex-col gap-3 p-6 md:p-8 h-full"
+                style={{ background: "#0f0f0f" }}
+              >
+                <p
+                  className="text-[10px] md:text-[11px] font-medium tracking-[0.22em] uppercase"
+                  style={{ fontFamily: "var(--font-blender), sans-serif", color: "rgba(255,255,255,0.35)" }}
+                >
+                  {card.label}
+                </p>
+                <p
+                  className="font-[800] leading-none"
+                  style={{
+                    fontFamily: "var(--font-blender), sans-serif",
+                    color: "hsla(0,0%,100%,0.92)",
+                    fontSize: "clamp(28px, 3.5vw, 44px)",
+                  }}
+                >
+                  {card.value}
+                </p>
+                <p
+                  className="text-[12px] md:text-[13px] font-light leading-[1.5] mt-auto"
+                  style={{ fontFamily: "var(--font-blender), sans-serif", color: "rgba(255,255,255,0.4)" }}
+                >
+                  {card.sub}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
     </>
