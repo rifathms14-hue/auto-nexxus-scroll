@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import NextImage from "next/image";
+import PixelCard, { type PixelCardHandle } from "./PixelCard";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 
@@ -17,15 +19,16 @@ const TEXT_WINDOWS = {
 
 const ORANGE = "hsla(24, 100%, 50%, 1)";
 
-const SPEC_CARDS = [
-  { label: "Engine",       value: "373.2 cc",  sub: "Single-cylinder, liquid-cooled" },
-  { label: "Peak Power",   value: "43 HP",      sub: "@ 9,000 rpm" },
-  { label: "Peak Torque",  value: "37 Nm",      sub: "@ 7,000 rpm" },
-  { label: "Dry Weight",   value: "163 kg",     sub: "Race-ready kerb" },
-  { label: "Suspension",   value: "WP APEX",    sub: "43 mm USD forks" },
-  { label: "Brakes",       value: "Bybre",      sub: "320 mm front disc" },
-  { label: "Frame",        value: "Chromoly",   sub: "Trellis steel" },
-  { label: "Transmission", value: "6-speed",    sub: "Quickshifter+ ready" },
+const PEOPLE_CARDS = [
+  { img: "/people/Images.png",   name: "Nilesh Dhumal",   expertise: "Track Performance & Riding Dynamics"  },
+  { img: "/people/Images-1.png", name: "Ouseph Chacko",   expertise: "Advanced Road Riding Techniques"      },
+  { img: "/people/Images-2.png", name: "Rish John George",expertise: "Race-Bred Skill Development"          },
+  { img: "/people/Images-3.png", name: "Vijendra Nilahri", expertise: "Off-Road & Dirt Track Mastery"       },
+  { img: "/people/Images-4.png", name: "Varad More",       expertise: "Technical Precision & Control"       },
+  { img: "/people/Images-5.png", name: "Emmanuel Jebaraj", expertise: "High-Speed Circuit Training"         },
+  { img: "/people/Images-6.png", name: "Sangram Patil",    expertise: "Urban Performance Riding"            },
+  // 8th card — duplicate of Nilesh Dhumal for grid consistency
+  { img: "/people/Images.png",   name: "Nilesh Dhumal",   expertise: "Track Performance & Riding Dynamics"  },
 ];
 
 export default function HeroSection() {
@@ -42,6 +45,32 @@ export default function HeroSection() {
 
   // ── Hero text: appears 4 s after loader clears ────────────
   const [heroTextVisible, setHeroTextVisible] = useState(false);
+
+  // ── People-card flip state ────────────────────────────────
+  const [flipped, setFlipped]   = useState<boolean[]>(Array(8).fill(false));
+  const pixelRefs               = useRef<(PixelCardHandle | null)[]>([]);
+  const animating               = useRef<Set<number>>(new Set());
+  const FLIP_MS                 = 680; // ms — pixel-peak timing
+
+  const handleCardClick = useCallback((i: number) => {
+    if (animating.current.has(i)) return;
+    const pRef = pixelRefs.current[i];
+    if (!pRef) return;
+
+    animating.current.add(i);
+    pRef.appear();                                    // phase 1: pixels cover
+
+    setTimeout(() => {
+      setFlipped(prev => {                            // phase 2: swap face
+        const next = [...prev];
+        next[i] = !next[i];
+        return next;
+      });
+      pRef.disappear();                               // phase 3: pixels reveal
+
+      setTimeout(() => animating.current.delete(i), FLIP_MS);
+    }, FLIP_MS);
+  }, []);
 
   // ── Text set 1 refs ───────────────────────────────────────
   const s1Eyebrow = useRef<HTMLParagraphElement>(null);
@@ -186,7 +215,7 @@ export default function HeroSection() {
       {/* ════════════════════════════════════════════════════════
           SECTION 1 — Banner video hero
       ════════════════════════════════════════════════════════ */}
-      <section className="relative w-full h-screen overflow-hidden bg-[#030304]">
+      <section data-nav-theme="dark" className="relative w-full h-screen overflow-hidden bg-[#030304]">
 
         {/* ── Video — plays once, holds last frame ─────────── */}
         {/* Mobile */}
@@ -271,12 +300,6 @@ export default function HeroSection() {
               }}
             />
           ))}
-          <span
-            className="ml-3 text-[10px] tracking-[0.2em] uppercase"
-            style={{ fontFamily: "var(--font-blender), sans-serif", color: "rgba(255,255,255,0.3)" }}
-          >
-            01 / 03
-          </span>
         </div>
 
       </section>
@@ -286,6 +309,7 @@ export default function HeroSection() {
       ════════════════════════════════════════════════════════ */}
       <section
         ref={engineRef}
+        data-nav-theme="dark"
         className="relative w-full h-screen overflow-hidden bg-[#030304]"
       >
         {/* ── Canvas (mobile: 80vw portrait | desktop: 42vw landscape) ── */}
@@ -309,7 +333,7 @@ export default function HeroSection() {
         <div className="absolute top-12 md:top-[160px] left-12 md:left-[200px] z-30 max-w-[280px] md:max-w-[340px] flex flex-col gap-3 pointer-events-none select-none">
           <p
             ref={s1Eyebrow}
-            className="text-[18px] md:text-[24px] font-medium leading-[1.2] uppercase md:normal-case"
+            className="text-[16px] font-medium leading-[1.2] uppercase tracking-[0.2em]"
             style={{ fontFamily: "var(--font-blender), sans-serif", color: ORANGE, opacity: 0, filter: "blur(20px)", willChange: "opacity, filter, transform" }}
           >
             Precision, Layer by Layer
@@ -332,7 +356,7 @@ export default function HeroSection() {
         <div className="absolute bottom-12 md:bottom-[160px] right-12 md:right-[200px] z-30 max-w-[280px] md:max-w-[340px] flex flex-col gap-3 pointer-events-none select-none">
           <p
             ref={s2Eyebrow}
-            className="text-[18px] md:text-[24px] font-medium leading-[1.2] uppercase md:normal-case"
+            className="text-[16px] font-medium leading-[1.2] uppercase tracking-[0.2em]"
             style={{ fontFamily: "var(--font-blender), sans-serif", color: ORANGE, opacity: 0, filter: "blur(20px)", willChange: "opacity, filter, transform" }}
           >
             Engineered to Stay Aggressive
@@ -354,16 +378,17 @@ export default function HeroSection() {
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          SECTION 3 — Specs grid (2 rows × 4 columns)
+          SECTION 3 — People grid (2 rows × 4 columns)
       ════════════════════════════════════════════════════════ */}
-      <section className="w-full bg-[#030304] px-[20px] py-16 md:py-24">
-        {/* Section heading */}
-        <div className="mb-10 md:mb-14 flex flex-col gap-2">
+      <section data-nav-theme="dark" className="w-full bg-[#030304] px-[20px] py-16 md:py-24">
+
+        {/* Section heading — centred */}
+        <div className="mb-10 md:mb-14 flex flex-col items-center gap-2 text-center">
           <p
-            className="text-[11px] md:text-[12px] font-medium tracking-[0.28em] uppercase"
+            className="text-[16px] font-medium tracking-[0.2em] uppercase"
             style={{ fontFamily: "var(--font-blender), sans-serif", color: ORANGE }}
           >
-            RC 390 · Technical Specifications
+            Our Experts
           </p>
           <h2
             className="font-[800] leading-[1.05]"
@@ -373,48 +398,154 @@ export default function HeroSection() {
               fontSize: "clamp(28px, 5vw, 56px)",
             }}
           >
-            Built to Spec.
+            The Expertise That Trains You for More.
           </h2>
         </div>
 
-        {/* 2 × 4 grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-[1px]">
-          {SPEC_CARDS.map((card) => (
-            /* Gradient border wrapper */
+        {/* 2 × 4 grid — 16 px gap mobile, 28 px desktop */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-7">
+          {PEOPLE_CARDS.map((person, i) => (
+            /* ── Gradient border + click wrapper ─────────────────── */
             <div
-              key={card.label}
-              style={{
-                background: "linear-gradient(150deg, #666 0%, #000 100%)",
-                padding: "1px",
-              }}
+              key={i}
+              className="group cursor-pointer"
+              style={{ background: "linear-gradient(150deg, #666 0%, #000 100%)", padding: "1px" }}
+              onClick={() => handleCardClick(i)}
             >
-              {/* Card inner */}
+              {/* ── Card inner ──────────────────────────────────── */}
               <div
-                className="flex flex-col gap-3 p-6 md:p-8 h-full"
+                className="relative flex flex-col overflow-hidden"
                 style={{ background: "#0f0f0f" }}
               >
-                <p
-                  className="text-[10px] md:text-[11px] font-medium tracking-[0.22em] uppercase"
-                  style={{ fontFamily: "var(--font-blender), sans-serif", color: "rgba(255,255,255,0.35)" }}
-                >
-                  {card.label}
-                </p>
-                <p
-                  className="font-[800] leading-none"
+                {/* ── FRONT FACE ──────────────────────────────── */}
+                <div
+                  className="flex flex-col"
                   style={{
-                    fontFamily: "var(--font-blender), sans-serif",
-                    color: "hsla(0,0%,100%,0.92)",
-                    fontSize: "clamp(28px, 3.5vw, 44px)",
+                    paddingBottom: "36px",
+                    opacity: flipped[i] ? 0 : 1,
+                    visibility: flipped[i] ? "hidden" : "visible",
+                    transition: "none",
                   }}
                 >
-                  {card.value}
-                </p>
-                <p
-                  className="text-[12px] md:text-[13px] font-light leading-[1.5] mt-auto"
-                  style={{ fontFamily: "var(--font-blender), sans-serif", color: "rgba(255,255,255,0.4)" }}
+                  {/* ── Desktop: static reflection on hover ─── */}
+                  <div
+                    className="absolute inset-0 pointer-events-none z-10
+                               hidden md:block
+                               opacity-0 group-hover:opacity-100
+                               transition-opacity duration-500"
+                    style={{
+                      background:
+                        "linear-gradient(135deg,rgba(255,255,255,0.10) 0%,rgba(255,255,255,0.04) 38%,transparent 62%)",
+                    }}
+                  />
+
+                  {/* ── Mobile: animated glare sweep every 1200 ms ─
+                       Staggered by card index so they ripple across
+                       the grid instead of all firing simultaneously  */}
+                  <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden md:hidden">
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        bottom: 0,
+                        width: "45%",
+                        background:
+                          "linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.18) 50%,transparent 100%)",
+                        animation: "card-glare 1200ms ease-in-out infinite",
+                        animationDelay: `${i * 150}ms`,
+                      }}
+                    />
+                  </div>
+
+                  {/* Portrait */}
+                  <div className="relative w-full aspect-square overflow-hidden">
+                    <NextImage
+                      src={person.img}
+                      alt={person.name}
+                      fill
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                      style={{ objectFit: "cover", objectPosition: "top center" }}
+                    />
+                  </div>
+
+                  {/* Name */}
+                  <div className="text-center" style={{ marginTop: "32px" }}>
+                    <p
+                      className="font-[800] leading-tight"
+                      style={{
+                        fontFamily: "var(--font-blender), sans-serif",
+                        color: "rgba(255,255,255,0.92)",
+                        fontSize: "clamp(24px, 2.5vw, 32px)",
+                      }}
+                    >
+                      {person.name}
+                    </p>
+                  </div>
+                </div>
+
+                {/* ── BACK FACE ───────────────────────────────── */}
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-3 select-none"
+                  style={{
+                    background: "#0f0f0f",
+                    padding: "28px 16px 36px",
+                    opacity: flipped[i] ? 1 : 0,
+                    visibility: flipped[i] ? "visible" : "hidden",
+                    transition: "none",
+                  }}
                 >
-                  {card.sub}
-                </p>
+                  {/* Orange accent bar */}
+                  <div style={{ width: "32px", height: "2px", background: ORANGE, flexShrink: 0 }} />
+
+                  {/* Eyebrow */}
+                  <p
+                    className="text-[11px] font-medium tracking-[0.25em] uppercase text-center"
+                    style={{ fontFamily: "var(--font-blender), sans-serif", color: ORANGE }}
+                  >
+                    KTM Expert Trainer
+                  </p>
+
+                  {/* Name */}
+                  <p
+                    className="font-[800] leading-tight text-center"
+                    style={{
+                      fontFamily: "var(--font-blender), sans-serif",
+                      color: "rgba(255,255,255,0.95)",
+                      fontSize: "clamp(20px, 2vw, 28px)",
+                    }}
+                  >
+                    {person.name}
+                  </p>
+
+                  {/* Expertise */}
+                  <p
+                    className="text-[13px] font-light leading-[1.6] text-center"
+                    style={{ fontFamily: "var(--font-blender), sans-serif", color: "rgba(255,255,255,0.45)" }}
+                  >
+                    {person.expertise}
+                  </p>
+
+                  {/* Tap-to-return hint */}
+                  <p
+                    className="text-[9px] tracking-[0.22em] uppercase text-center"
+                    style={{
+                      fontFamily: "var(--font-blender), sans-serif",
+                      color: "rgba(255,255,255,0.18)",
+                      marginTop: "auto",
+                      paddingTop: "20px",
+                    }}
+                  >
+                    Tap to go back
+                  </p>
+                </div>
+
+                {/* ── PIXEL TRANSITION OVERLAY (z-30, pointer-events:none) ── */}
+                <PixelCard
+                  ref={(el) => { pixelRefs.current[i] = el; }}
+                  variant="ktm"
+                  noHover
+                  className="pixel-card-overlay"
+                />
               </div>
             </div>
           ))}

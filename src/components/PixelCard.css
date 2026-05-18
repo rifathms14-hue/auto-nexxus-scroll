@@ -1,9 +1,11 @@
+/* ─── Pixel canvas ────────────────────────────────────────────────────── */
 .pixel-canvas {
   width: 100%;
   height: 100%;
   display: block;
 }
 
+/* ─── Default standalone card ─────────────────────────────────────────── */
 .pixel-card {
   height: 400px;
   width: 300px;
@@ -33,4 +35,23 @@
 .pixel-card:hover::before,
 .pixel-card:focus-within::before {
   opacity: 1;
+}
+
+/* ─── Overlay variant — transparent transition layer inside a card ────── */
+.pixel-card-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;    /* override grid */
+  width: auto !important;
+  height: auto !important;
+  aspect-ratio: unset !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  z-index: 30;
+  pointer-events: none;         /* clicks fall through to the outer wrapper */
+}
+
+.pixel-card-overlay::before {
+  display: none !important;
 }
