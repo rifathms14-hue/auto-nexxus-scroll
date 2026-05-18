@@ -126,27 +126,37 @@ export default function HeroSection() {
     return () => ctx.revert();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const pct = Math.round((loadedCount / TOTAL_FRAMES) * 100);
-
   return (
     <section
       ref={sectionRef}
       className="relative w-full h-screen overflow-hidden bg-[#030304]"
     >
-      {/* ── Loading bar ─────────────────────────────────────── */}
-      {loadedCount < TOTAL_FRAMES && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-[#030304]">
-          <div className="w-48 h-px bg-white/10 relative overflow-hidden">
-            <div
-              className="absolute inset-y-0 left-0 bg-white/30 transition-all duration-75"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <span className="text-[10px] tracking-[0.2em] text-white/20 uppercase">
-            {pct}%
-          </span>
-        </div>
-      )}
+      {/* ── Loading video overlay ───────────────────────────── */}
+      <div
+        className="absolute inset-0 z-50 bg-[#030304] transition-opacity duration-700"
+        style={{ opacity: loadedCount >= TOTAL_FRAMES ? 0 : 1, pointerEvents: loadedCount >= TOTAL_FRAMES ? "none" : "auto" }}
+      >
+        {/* Mobile */}
+        <video
+          className="block md:hidden w-full h-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
+        >
+          <source src="/loading-mobile.mp4" type="video/mp4" />
+        </video>
+        {/* Desktop */}
+        <video
+          className="hidden md:block w-full h-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
+        >
+          <source src="/loading-desktop.mp4" type="video/mp4" />
+        </video>
+      </div>
 
       {/* ── Canvas — centered, 52vw, hard-light ─────────────── */}
       <canvas
