@@ -19,10 +19,11 @@ const ORANGE = "hsla(24, 100%, 50%, 1)";
 
 export default function HeroSection() {
   // ── Canvas / frame refs ───────────────────────────────────
-  const engineRef = useRef<HTMLElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const frameRef  = useRef({ current: 0 });
-  const imagesRef = useRef<HTMLImageElement[]>([]);
+  const engineRef      = useRef<HTMLElement>(null);
+  const canvasRef      = useRef<HTMLCanvasElement>(null);
+  const frameRef       = useRef({ current: 0 });
+  const imagesRef      = useRef<HTMLImageElement[]>([]);
+  const mobileVideoRef = useRef<HTMLVideoElement>(null);
 
   // ── Loading state ─────────────────────────────────────────
   const [loadedCount, setLoadedCount]   = useState(0);
@@ -114,6 +115,7 @@ export default function HeroSection() {
         onUpdate: (self) => {
           const p = self.progress;
 
+          // ── Desktop: canvas frame scrub ─────────────────────
           const target = Math.min(
             Math.floor(p * (TOTAL_FRAMES - 1)),
             TOTAL_FRAMES - 1
@@ -121,6 +123,12 @@ export default function HeroSection() {
           if (target !== frameRef.current.current) {
             frameRef.current.current = target;
             drawFrame(target);
+          }
+
+          // ── Mobile: video time scrub ─────────────────────────
+          const mv = mobileVideoRef.current;
+          if (mv && mv.readyState >= 2 && mv.duration) {
+            mv.currentTime = p * mv.duration;
           }
 
           applyBlurTransition(s1Eyebrow.current, p, TEXT_WINDOWS.set1, 0);
@@ -263,10 +271,22 @@ export default function HeroSection() {
         ref={engineRef}
         className="relative w-full h-screen overflow-hidden bg-[#030304]"
       >
-        {/* ── Canvas ─────────────────────────────────────────── */}
+        {/* ── Mobile: video scrub ──────────────────────────────── */}
+        <video
+          ref={mobileVideoRef}
+          className="block md:hidden absolute inset-0 w-full h-full object-cover z-10"
+          muted
+          playsInline
+          preload="auto"
+          style={{ mixBlendMode: "hard-light" }}
+        >
+          <source src="/engine-assy-mobile.mp4" type="video/mp4" />
+        </video>
+
+        {/* ── Desktop: canvas frame scrub ──────────────────────── */}
         <canvas
           ref={canvasRef}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10"
+          className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10"
           style={{ mixBlendMode: "hard-light" }}
         />
 
