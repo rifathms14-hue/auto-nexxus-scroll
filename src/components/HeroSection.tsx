@@ -10,41 +10,36 @@ const TOTAL_FRAMES = 193;
 const FRAME_PATH = (i: number) =>
   `/frames/frame_${String(i).padStart(4, "0")}.jpg`;
 
-// ─── Scroll progress windows (6 scroll units across 500% total) ─────────────
-// 1 unit ≈ 16.67% of total progress
-//
-// Set 1 (top-left):  reveal scroll 1 → fade scroll 3
-// Set 2 (bottom-right): reveal scroll 4 → fade scroll 6
-
 const TEXT_WINDOWS = {
   set1: { revealS: 0.02, revealE: 0.14, fadeS: 0.38, fadeE: 0.50 },
   set2: { revealS: 0.54, revealE: 0.66, fadeS: 0.88, fadeE: 0.98 },
 } as const;
 
-// ─── Orange accent colour ─────────────────────────────────────────────────────
 const ORANGE = "hsla(24, 100%, 50%, 1)";
 
 export default function HeroSection() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const canvasRef  = useRef<HTMLCanvasElement>(null);
-  const frameRef   = useRef({ current: 0 });
-  const imagesRef  = useRef<HTMLImageElement[]>([]);
-  const [loadedCount, setLoadedCount] = useState(0);
-  const [minDelayDone, setMinDelayDone] = useState(false);
-  // phase: 'loading' → 'banner' → 'scroll'
-  const [phase, setPhase] = useState<"loading" | "banner" | "scroll">("loading");
+  // ── Canvas / frame refs ───────────────────────────────────
+  const engineRef = useRef<HTMLElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const frameRef  = useRef({ current: 0 });
+  const imagesRef = useRef<HTMLImageElement[]>([]);
 
-  // ── Text set 1 refs ──────────────────────────────────────────
+  // ── Loading state ─────────────────────────────────────────
+  const [loadedCount, setLoadedCount]   = useState(0);
+  const [minDelayDone, setMinDelayDone] = useState(false);
+  const loadingDone = loadedCount >= TOTAL_FRAMES && minDelayDone;
+
+  // ── Text set 1 refs ───────────────────────────────────────
   const s1Eyebrow = useRef<HTMLParagraphElement>(null);
   const s1Heading = useRef<HTMLHeadingElement>(null);
   const s1Body    = useRef<HTMLParagraphElement>(null);
 
-  // ── Text set 2 refs ──────────────────────────────────────────
+  // ── Text set 2 refs ───────────────────────────────────────
   const s2Eyebrow = useRef<HTMLParagraphElement>(null);
   const s2Heading = useRef<HTMLHeadingElement>(null);
   const s2Body    = useRef<HTMLParagraphElement>(null);
 
-  // ── Draw frame to canvas ──────────────────────────────────────
+  // ── Draw frame to canvas ──────────────────────────────────
   const drawFrame = (index: number) => {
     const canvas = canvasRef.current;
     const img    = imagesRef.current[index];
@@ -56,20 +51,13 @@ export default function HeroSection() {
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   };
 
-  // ── 2-second minimum loading hold ───────────────────────────
+  // ── 2-second minimum loading hold ────────────────────────
   useEffect(() => {
     const t = setTimeout(() => setMinDelayDone(true), 2000);
     return () => clearTimeout(t);
   }, []);
 
-  // ── Advance loading → banner once frames + delay are ready ──
-  useEffect(() => {
-    if (loadedCount >= TOTAL_FRAMES && minDelayDone && phase === "loading") {
-      setPhase("banner");
-    }
-  }, [loadedCount, minDelayDone, phase]);
-
-  // ── Preload all frames ────────────────────────────────────────
+  // ── Preload all frames ────────────────────────────────────
   useEffect(() => {
     imagesRef.current = Array.from({ length: TOTAL_FRAMES }, (_, i) => {
       const img = new Image();
@@ -84,7 +72,7 @@ export default function HeroSection() {
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Size canvas: full-width on mobile, 52vw on desktop ──────────
+  // ── Size canvas: 100vw mobile, 52vw desktop ───────────────
   useEffect(() => {
     const resize = () => {
       const canvas = canvasRef.current;
@@ -103,20 +91,19 @@ export default function HeroSection() {
     return () => window.removeEventListener("resize", resize);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── GSAP ScrollTrigger ────────────────────────────────────────
+  // ── GSAP ScrollTrigger ────────────────────────────────────
   useEffect(() => {
     const ctx = gsap.context(() => {
       ScrollTrigger.create({
-        trigger: sectionRef.current,
+        trigger: engineRef.current,
         start: "top top",
-        end: "+=500%",          // 6 scroll units
+        end: "+=500%",
         scrub: 0.6,
         pin: true,
         anticipatePin: 1,
         onUpdate: (self) => {
           const p = self.progress;
 
-          // ── Frame scrubbing ─────────────────────────────────
           const target = Math.min(
             Math.floor(p * (TOTAL_FRAMES - 1)),
             TOTAL_FRAMES - 1
@@ -126,31 +113,31 @@ export default function HeroSection() {
             drawFrame(target);
           }
 
-          // ── Text set 1 ──────────────────────────────────────
           applyBlurTransition(s1Eyebrow.current, p, TEXT_WINDOWS.set1, 0);
           applyBlurTransition(s1Heading.current, p, TEXT_WINDOWS.set1, 1);
           applyBlurTransition(s1Body.current,    p, TEXT_WINDOWS.set1, 2);
 
-          // ── Text set 2 ──────────────────────────────────────
           applyBlurTransition(s2Eyebrow.current, p, TEXT_WINDOWS.set2, 0);
           applyBlurTransition(s2Heading.current, p, TEXT_WINDOWS.set2, 1);
           applyBlurTransition(s2Body.current,    p, TEXT_WINDOWS.set2, 2);
         },
       });
-    }, sectionRef);
+    }, engineRef);
 
     return () => ctx.revert();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <section
-      ref={sectionRef}
-      className="relative w-full h-screen overflow-hidden bg-[#030304]"
-    >
-      {/* ── Loading video overlay ───────────────────────────── */}
+    <>
+      {/* ════════════════════════════════════════════════════════
+          FIXED LOADING OVERLAY — sits above both sections
+      ════════════════════════════════════════════════════════ */}
       <div
-        className="absolute inset-0 z-50 bg-[#030304] transition-opacity duration-700"
-        style={{ opacity: phase === "loading" ? 1 : 0, pointerEvents: phase === "loading" ? "auto" : "none" }}
+        className="fixed inset-0 z-[100] bg-[#030304] transition-opacity duration-700"
+        style={{
+          opacity: loadingDone ? 0 : 1,
+          pointerEvents: loadingDone ? "none" : "auto",
+        }}
       >
         {/* Mobile */}
         <video
@@ -168,153 +155,102 @@ export default function HeroSection() {
         </video>
       </div>
 
-      {/* ── Banner video (plays once after loader) ───────────── */}
-      <div
-        className="absolute inset-0 z-40 bg-[#030304] transition-opacity duration-700"
-        style={{ opacity: phase === "banner" ? 1 : 0, pointerEvents: phase === "banner" ? "auto" : "none" }}
-      >
+      {/* ════════════════════════════════════════════════════════
+          SECTION 1 — Banner video hero
+      ════════════════════════════════════════════════════════ */}
+      <section className="relative w-full h-screen overflow-hidden bg-[#030304]">
         {/* Mobile */}
         <video
           className="block md:hidden w-full h-full object-cover"
-          autoPlay muted playsInline
-          onEnded={() => setPhase("scroll")}
+          autoPlay loop muted playsInline
         >
           <source src="/banner-mobile.mp4" type="video/mp4" />
         </video>
         {/* Desktop */}
         <video
           className="hidden md:block w-full h-full object-cover"
-          autoPlay muted playsInline
-          onEnded={() => setPhase("scroll")}
+          autoPlay loop muted playsInline
         >
           <source src="/banner-desktop.mp4" type="video/mp4" />
         </video>
-      </div>
+      </section>
 
-      {/* ── Canvas — centered, 52vw, hard-light ─────────────── */}
-      <canvas
-        ref={canvasRef}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10"
-        style={{ mixBlendMode: "hard-light" }}
-      />
+      {/* ════════════════════════════════════════════════════════
+          SECTION 2 — Engine scroll animation
+      ════════════════════════════════════════════════════════ */}
+      <section
+        ref={engineRef}
+        className="relative w-full h-screen overflow-hidden bg-[#030304]"
+      >
+        {/* ── Canvas ─────────────────────────────────────────── */}
+        <canvas
+          ref={canvasRef}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10"
+          style={{ mixBlendMode: "hard-light" }}
+        />
 
-      {/* ── Film grain ──────────────────────────────────────── */}
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none z-20 opacity-[0.035]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-          backgroundSize: "160px 160px",
-        }}
-      />
-
-      {/* ══════════════════════════════════════════════════════
-          TEXT SET 1 — top-left
-          Appears: scroll 1 | Disappears: scroll 3
-      ══════════════════════════════════════════════════════ */}
-      <div className="absolute top-12 md:top-[160px] left-12 md:left-[200px] z-30 max-w-[280px] md:max-w-[340px] flex flex-col gap-3 pointer-events-none select-none">
-        <p
-          ref={s1Eyebrow}
-          className="text-[18px] md:text-[24px] font-medium leading-[1.2] uppercase md:normal-case"
+        {/* ── Film grain ───────────────────────────────────────── */}
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none z-20 opacity-[0.035]"
           style={{
-            fontFamily: "var(--font-blender), sans-serif",
-            color: ORANGE,
-            opacity: 0,
-            filter: "blur(20px)",
-            willChange: "opacity, filter, transform",
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+            backgroundSize: "160px 160px",
           }}
-        >
-          Precision, Layer by Layer
-        </p>
+        />
 
-        <h2
-          ref={s1Heading}
-          className="text-[24px] md:text-[36px] font-[800] leading-[1.1]"
-          style={{
-            fontFamily: "var(--font-blender), sans-serif",
-            color: "hsla(0, 0%, 100%, 0.92)",
-            opacity: 0,
-            filter: "blur(20px)",
-            willChange: "opacity, filter, transform",
-          }}
-        >
-          Every component inside the RC&nbsp;390 engine exists for a reason.
-        </h2>
+        {/* ══ TEXT SET 1 — top-left ═══════════════════════════ */}
+        <div className="absolute top-12 md:top-[160px] left-12 md:left-[200px] z-30 max-w-[280px] md:max-w-[340px] flex flex-col gap-3 pointer-events-none select-none">
+          <p
+            ref={s1Eyebrow}
+            className="text-[18px] md:text-[24px] font-medium leading-[1.2] uppercase md:normal-case"
+            style={{ fontFamily: "var(--font-blender), sans-serif", color: ORANGE, opacity: 0, filter: "blur(20px)", willChange: "opacity, filter, transform" }}
+          >
+            Precision, Layer by Layer
+          </p>
+          <h2
+            ref={s1Heading}
+            className="text-[24px] md:text-[36px] font-[800] leading-[1.1]"
+            style={{ fontFamily: "var(--font-blender), sans-serif", color: "hsla(0,0%,100%,0.92)", opacity: 0, filter: "blur(20px)", willChange: "opacity, filter, transform" }}
+          >
+            Every component inside the RC&nbsp;390 engine exists for a reason.
+          </h2>
+          <p ref={s1Body} className="hidden" style={{ opacity: 0 }}>
+            From forged internals to friction-optimized engineering, performance
+            here isn&apos;t added later — it&apos;s built into the foundation from
+            the very first movement.
+          </p>
+        </div>
 
-        <p
-          ref={s1Body}
-          className="hidden"
-          style={{ opacity: 0 }}
-        >
-          From forged internals to friction-optimized engineering, performance
-          here isn&apos;t added later — it&apos;s built into the foundation from
-          the very first movement.
-        </p>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════
-          TEXT SET 2 — bottom-right
-          Appears: scroll 4 | Disappears: scroll 6
-      ══════════════════════════════════════════════════════ */}
-      <div className="absolute bottom-12 md:bottom-[160px] right-12 md:right-[200px] z-30 max-w-[280px] md:max-w-[340px] flex flex-col gap-3 pointer-events-none select-none">
-        <p
-          ref={s2Eyebrow}
-          className="text-[18px] md:text-[24px] font-medium leading-[1.2] uppercase md:normal-case"
-          style={{
-            fontFamily: "var(--font-blender), sans-serif",
-            color: ORANGE,
-            opacity: 0,
-            filter: "blur(20px)",
-            willChange: "opacity, filter, transform",
-          }}
-        >
-          Engineered to Stay Aggressive
-        </p>
-
-        <h2
-          ref={s2Heading}
-          className="text-[24px] md:text-[36px] font-[800] leading-[1.1]"
-          style={{
-            fontFamily: "var(--font-blender), sans-serif",
-            color: "hsla(0, 0%, 100%, 0.92)",
-            opacity: 0,
-            filter: "blur(20px)",
-            willChange: "opacity, filter, transform",
-          }}
-        >
-          Lightweight architecture.&nbsp;High&#8209;revving response.
-        </h2>
-
-        <p
-          ref={s2Body}
-          className="hidden"
-          style={{ opacity: 0 }}
-        >
-          Race-bred precision tuned for the street.
-          <br />
-          This isn&apos;t just an engine being assembled. It&apos;s performance
-          being engineered in real time.
-        </p>
-      </div>
-
-      {/* ── Scroll hint ──────────────────────────────────────── */}
-      <div className="hidden absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 pointer-events-none">
-        <span
-          style={{ fontFamily: "var(--font-blender), sans-serif", fontWeight: 300 }}
-          className="text-[9px] tracking-[0.25em] text-white/25 uppercase"
-        >
-          Scroll
-        </span>
-        <div className="w-px h-7 bg-white/15 animate-pulse" />
-      </div>
-    </section>
+        {/* ══ TEXT SET 2 — bottom-right ════════════════════════ */}
+        <div className="absolute bottom-12 md:bottom-[160px] right-12 md:right-[200px] z-30 max-w-[280px] md:max-w-[340px] flex flex-col gap-3 pointer-events-none select-none">
+          <p
+            ref={s2Eyebrow}
+            className="text-[18px] md:text-[24px] font-medium leading-[1.2] uppercase md:normal-case"
+            style={{ fontFamily: "var(--font-blender), sans-serif", color: ORANGE, opacity: 0, filter: "blur(20px)", willChange: "opacity, filter, transform" }}
+          >
+            Engineered to Stay Aggressive
+          </p>
+          <h2
+            ref={s2Heading}
+            className="text-[24px] md:text-[36px] font-[800] leading-[1.1]"
+            style={{ fontFamily: "var(--font-blender), sans-serif", color: "hsla(0,0%,100%,0.92)", opacity: 0, filter: "blur(20px)", willChange: "opacity, filter, transform" }}
+          >
+            Lightweight architecture.&nbsp;High&#8209;revving response.
+          </h2>
+          <p ref={s2Body} className="hidden" style={{ opacity: 0 }}>
+            Race-bred precision tuned for the street.
+            <br />
+            This isn&apos;t just an engine being assembled. It&apos;s performance
+            being engineered in real time.
+          </p>
+        </div>
+      </section>
+    </>
   );
 }
 
-// ─── Blur transition helper ────────────────────────────────────────────────────
-// Drives opacity, blur, and a subtle Y shift purely from scroll progress.
-// staggerIndex staggers each element slightly so they don't reveal in unison.
-
+// ─── Blur transition helper ───────────────────────────────────────────────────
 function applyBlurTransition(
   el: HTMLElement | null,
   p: number,
@@ -322,29 +258,17 @@ function applyBlurTransition(
   staggerIndex: number
 ) {
   if (!el) return;
-
-  const lag = staggerIndex * 0.018; // stagger per element
-
+  const lag    = staggerIndex * 0.018;
   const revealT = smoothStep(window.revealS + lag, window.revealE + lag, p);
-  const fadeT   = smoothStep(window.fadeS,          window.fadeE,          p);
-
-  // Opacity: ramp up on reveal, ramp down on fade
+  const fadeT   = smoothStep(window.fadeS, window.fadeE, p);
   const opacity = revealT * (1 - fadeT);
-
-  // Blur: 20px → 0 on reveal, 0 → 20px on fade
-  const blur = lerp(20, 0, revealT) + lerp(0, 20, fadeT);
-
-  // Subtle vertical shift: lifts in on reveal, drifts up slightly on fade
-  const yIn  = lerp(14, 0, revealT);
-  const yOut = lerp(0, -8, fadeT);
-  const y    = yIn + yOut;
-
+  const blur    = lerp(20, 0, revealT) + lerp(0, 20, fadeT);
+  const y       = lerp(14, 0, revealT) + lerp(0, -8, fadeT);
   el.style.opacity   = String(Math.max(0, Math.min(1, opacity)));
   el.style.filter    = `blur(${blur.toFixed(2)}px)`;
   el.style.transform = `translateY(${y.toFixed(2)}px)`;
 }
 
-// ─── Math utils ───────────────────────────────────────────────────────────────
 function smoothStep(edge0: number, edge1: number, x: number): number {
   const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
   return t * t * (3 - 2 * t);
