@@ -30,6 +30,7 @@ export default function HeroSection() {
   const frameRef   = useRef({ current: 0 });
   const imagesRef  = useRef<HTMLImageElement[]>([]);
   const [loadedCount, setLoadedCount] = useState(0);
+  const [minDelayDone, setMinDelayDone] = useState(false);
 
   // ── Text set 1 refs ──────────────────────────────────────────
   const s1Eyebrow = useRef<HTMLParagraphElement>(null);
@@ -52,6 +53,12 @@ export default function HeroSection() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   };
+
+  // ── 2-second minimum loading hold ───────────────────────────
+  useEffect(() => {
+    const t = setTimeout(() => setMinDelayDone(true), 2000);
+    return () => clearTimeout(t);
+  }, []);
 
   // ── Preload all frames ────────────────────────────────────────
   useEffect(() => {
@@ -134,7 +141,7 @@ export default function HeroSection() {
       {/* ── Loading video overlay ───────────────────────────── */}
       <div
         className="absolute inset-0 z-50 bg-[#030304] transition-opacity duration-700"
-        style={{ opacity: loadedCount >= TOTAL_FRAMES ? 0 : 1, pointerEvents: loadedCount >= TOTAL_FRAMES ? "none" : "auto" }}
+        style={{ opacity: loadedCount >= TOTAL_FRAMES && minDelayDone ? 0 : 1, pointerEvents: loadedCount >= TOTAL_FRAMES && minDelayDone ? "none" : "auto" }}
       >
         {/* Mobile */}
         <video
