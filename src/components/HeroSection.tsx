@@ -29,6 +29,9 @@ export default function HeroSection() {
   const [minDelayDone, setMinDelayDone] = useState(false);
   const loadingDone = loadedCount >= TOTAL_FRAMES && minDelayDone;
 
+  // ── Hero text: appears 4 s after loader clears ────────────
+  const [heroTextVisible, setHeroTextVisible] = useState(false);
+
   // ── Text set 1 refs ───────────────────────────────────────
   const s1Eyebrow = useRef<HTMLParagraphElement>(null);
   const s1Heading = useRef<HTMLHeadingElement>(null);
@@ -56,6 +59,13 @@ export default function HeroSection() {
     const t = setTimeout(() => setMinDelayDone(true), 2000);
     return () => clearTimeout(t);
   }, []);
+
+  // ── Reveal hero text 4 s after loader clears ─────────────
+  useEffect(() => {
+    if (!loadingDone) return;
+    const t = setTimeout(() => setHeroTextVisible(true), 4000);
+    return () => clearTimeout(t);
+  }, [loadingDone]);
 
   // ── Preload all frames ────────────────────────────────────
   useEffect(() => {
@@ -180,7 +190,10 @@ export default function HeroSection() {
         <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#030304]/80 via-transparent to-transparent" />
 
         {/* ── Text + CTA ───────────────────────────────────── */}
-        <div className="absolute z-20 bottom-[140px] md:bottom-[160px] left-8 md:left-[200px] flex flex-col gap-4 max-w-[320px] md:max-w-[520px] select-none">
+        <div
+          className="absolute z-20 bottom-[140px] md:bottom-[160px] left-8 md:left-[200px] flex flex-col gap-4 max-w-[320px] md:max-w-[520px] select-none transition-all duration-1000"
+          style={{ opacity: heroTextVisible ? 1 : 0, transform: heroTextVisible ? "translateY(0px)" : "translateY(16px)" }}
+        >
           <p
             className="text-[11px] md:text-[13px] font-medium tracking-[0.25em] uppercase"
             style={{ fontFamily: "var(--font-blender), sans-serif", color: ORANGE }}
@@ -219,7 +232,10 @@ export default function HeroSection() {
         </div>
 
         {/* ── Carousel indicator ────────────────────────────── */}
-        <div className="absolute z-20 bottom-[60px] md:bottom-[72px] left-8 md:left-[200px] flex items-center gap-2">
+        <div
+          className="absolute z-20 bottom-[60px] md:bottom-[72px] left-8 md:left-[200px] flex items-center gap-2 transition-all duration-1000 delay-200"
+          style={{ opacity: heroTextVisible ? 1 : 0, transform: heroTextVisible ? "translateY(0px)" : "translateY(16px)" }}
+        >
           {[0, 1, 2].map((i) => (
             <div
               key={i}
