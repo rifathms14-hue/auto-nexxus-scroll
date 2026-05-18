@@ -68,7 +68,7 @@ const VARIANTS: Record<string, { gap: number; speed: number; colors: string; noF
   blue:    { gap: 10, speed: 25, colors: "#e0f2fe,#7dd3fc,#0ea5e9", noFocus: false },
   yellow:  { gap: 3,  speed: 20, colors: "#fef08a,#fde047,#eab308", noFocus: false },
   pink:    { gap: 6,  speed: 80, colors: "#fecdd3,#fda4af,#e11d48", noFocus: true  },
-  ktm:     { gap: 8,  speed: 70, colors: "#FF6F16,#E55A00,#FF9A4D", noFocus: true  },
+  ktm:     { gap: 4,  speed: 90, colors: "#FF6F16,#FFA040,#FFD000,#FF4500,#ffffff", noFocus: true  },
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────

@@ -19,16 +19,73 @@ const TEXT_WINDOWS = {
 
 const ORANGE = "hsla(24, 100%, 50%, 1)";
 
+// ─── Hero carousel slides ─────────────────────────────────────────────────────
+const SLIDES = [
+  { type: "video" as const, src: { mobile: "/banner-mobile.mp4", desktop: "/banner-desktop.mp4" } },
+  { type: "image" as const, src: { mobile: "/banner-2.png",      desktop: "/banner-2.png"        } },
+  { type: "video" as const, src: { mobile: "/banner-3.mp4",      desktop: "/banner-3.mp4"        } },
+];
+const IMAGE_SLIDE_DURATION = 5000; // ms — image slides only; video slides use onEnded
+
+// ─── Expert cards ─────────────────────────────────────────────────────────────
 const PEOPLE_CARDS = [
-  { img: "/people/Images.png",   name: "Nilesh Dhumal",   expertise: "Track Performance & Riding Dynamics"  },
-  { img: "/people/Images-1.png", name: "Ouseph Chacko",   expertise: "Advanced Road Riding Techniques"      },
-  { img: "/people/Images-2.png", name: "Rish John George",expertise: "Race-Bred Skill Development"          },
-  { img: "/people/Images-3.png", name: "Vijendra Nilahri", expertise: "Off-Road & Dirt Track Mastery"       },
-  { img: "/people/Images-4.png", name: "Varad More",       expertise: "Technical Precision & Control"       },
-  { img: "/people/Images-5.png", name: "Emmanuel Jebaraj", expertise: "High-Speed Circuit Training"         },
-  { img: "/people/Images-6.png", name: "Sangram Patil",    expertise: "Urban Performance Riding"            },
+  {
+    img: "/people/Images.png",
+    name: "Nilesh Dhumal",
+    role: "Off-road Motorcycle Instructor",
+    desc: "Accomplished Mountain Bike Racer",
+    type: "KTM Expert",
+  },
+  {
+    img: "/people/Images-1.png",
+    name: "Ouseph Chacko",
+    role: "Founder & Instructor — The School of Dirt",
+    desc: "Ex-Auto journalist with 14 years of experience",
+    type: "KTM Adventure Expert",
+  },
+  {
+    img: "/people/Images-2.png",
+    name: "Rish John George",
+    role: "Manager & Asst. Instructor — The School of Dirt",
+    desc: "A die-hard adventure rider with 15+ years of experience",
+    type: "KTM Adventure Expert",
+  },
+  {
+    img: "/people/Images-3.png",
+    name: "Vijendra Nilagiri",
+    role: "Sr. Trainer, Big Rock Dirt Park",
+    desc: "Senior off-road instructor with wide experience on dirt, adventure and flat track bikes",
+    type: "KTM Adventure Expert",
+  },
+  {
+    img: "/people/Images-4.png",
+    name: "Varad More",
+    role: "Head Trainer — 21 Enduro Park",
+    desc: "A talented motorcycle journalist and influencer",
+    type: "KTM Adventure Expert",
+  },
+  {
+    img: "/people/Images-5.png",
+    name: "Emmanuel Jebaraj",
+    role: "Founder, Gusto Racing India",
+    desc: "Racing school accredited by FMSCI · 7-time National Racing Champion",
+    type: "KTM Street Expert",
+  },
+  {
+    img: "/people/Images-6.png",
+    name: "Sangram Patil",
+    role: "Head Trainer, 21 Enduro Park",
+    desc: "",
+    type: "KTM Expert",
+  },
   // 8th card — duplicate of Nilesh Dhumal for grid consistency
-  { img: "/people/Images.png",   name: "Nilesh Dhumal",   expertise: "Track Performance & Riding Dynamics"  },
+  {
+    img: "/people/Images.png",
+    name: "Nilesh Dhumal",
+    role: "Off-road Motorcycle Instructor",
+    desc: "Accomplished Mountain Bike Racer",
+    type: "KTM Expert",
+  },
 ];
 
 export default function HeroSection() {
@@ -38,6 +95,12 @@ export default function HeroSection() {
   const frameRef       = useRef({ current: 0 });
   const imagesRef      = useRef<HTMLImageElement[]>([]);
 
+  // ── Cinematic reveal refs ─────────────────────────────────
+  const cinematicRef    = useRef<HTMLElement>(null);
+  const cinematicWrap   = useRef<HTMLDivElement>(null);
+  const cinematicOverlay = useRef<HTMLDivElement>(null);
+  const cinematicText   = useRef<HTMLDivElement>(null);
+
   // ── Loading state ─────────────────────────────────────────
   const [loadedCount, setLoadedCount]   = useState(0);
   const [minDelayDone, setMinDelayDone] = useState(false);
@@ -45,6 +108,17 @@ export default function HeroSection() {
 
   // ── Hero text: appears 4 s after loader clears ────────────
   const [heroTextVisible, setHeroTextVisible] = useState(false);
+
+  // ── Carousel state ───────────────────────────────────────
+  const [currentSlide, setCurrentSlide] = useState(0);
+  // videoRefsMap[slideIndex][0=mobile, 1=desktop]
+  const videoRefsMap  = useRef<(HTMLVideoElement | null)[][]>([]);
+  const videoEndedRef = useRef(false); // dedup: prevent both mobile+desktop onEnded firing twice
+
+  // ── Helmet hover-flip state (0 = track col, 1 = wild col) ───
+  const [helmetFlipped, setHelmetFlipped] = useState([false, false]);
+  const helmetPixelRefs  = useRef<(PixelCardHandle | null)[]>([]);
+  const helmetAnimating  = useRef<Set<number>>(new Set());
 
   // ── People-card flip state ────────────────────────────────
   const [flipped, setFlipped]   = useState<boolean[]>(Array(8).fill(false));
@@ -70,6 +144,41 @@ export default function HeroSection() {
 
       setTimeout(() => animating.current.delete(i), FLIP_MS);
     }, FLIP_MS);
+  }, []);
+
+  // ── Helmet hover: pixel-flip helmet ↔ bike ───────────────────────────────
+  const handleHelmetEnter = useCallback((i: number) => {
+    if (helmetAnimating.current.has(i)) return;
+    const pRef = helmetPixelRefs.current[i];
+    if (!pRef) return;
+    helmetAnimating.current.add(i);
+    pRef.appear();
+    setTimeout(() => {
+      setHelmetFlipped(prev => { const n = [...prev]; n[i] = true; return n; });
+      pRef.disappear();
+      setTimeout(() => helmetAnimating.current.delete(i), FLIP_MS);
+    }, FLIP_MS);
+  }, []);
+
+  const handleHelmetLeave = useCallback((i: number) => {
+    if (helmetAnimating.current.has(i)) return;
+    const pRef = helmetPixelRefs.current[i];
+    if (!pRef) return;
+    helmetAnimating.current.add(i);
+    pRef.appear();
+    setTimeout(() => {
+      setHelmetFlipped(prev => { const n = [...prev]; n[i] = false; return n; });
+      pRef.disappear();
+      setTimeout(() => helmetAnimating.current.delete(i), FLIP_MS);
+    }, FLIP_MS);
+  }, []);
+
+  // ── Video-ended handler (deduped: mobile + desktop both fire) ────────────
+  const handleVideoEnded = useCallback(() => {
+    if (videoEndedRef.current) return;
+    videoEndedRef.current = true;
+    setTimeout(() => { videoEndedRef.current = false; }, 300);
+    setCurrentSlide(prev => (prev + 1) % SLIDES.length);
   }, []);
 
   // ── Text set 1 refs ───────────────────────────────────────
@@ -106,6 +215,25 @@ export default function HeroSection() {
     const t = setTimeout(() => setHeroTextVisible(true), 4000);
     return () => clearTimeout(t);
   }, [loadingDone]);
+
+  // ── Image-slide timer: advance after 5 s ─────────────────
+  useEffect(() => {
+    if (SLIDES[currentSlide].type !== "image") return;
+    const t = setTimeout(() => {
+      setCurrentSlide(prev => (prev + 1) % SLIDES.length);
+    }, IMAGE_SLIDE_DURATION);
+    return () => clearTimeout(t);
+  }, [currentSlide]);
+
+  // ── Restart video from top whenever it becomes the active slide ──────────
+  useEffect(() => {
+    if (SLIDES[currentSlide].type !== "video") return;
+    (videoRefsMap.current[currentSlide] ?? []).forEach(v => {
+      if (!v) return;
+      v.currentTime = 0;
+      v.play().catch(() => {});
+    });
+  }, [currentSlide]);
 
   // ── Preload all frames (mobile or desktop set) ───────────
   useEffect(() => {
@@ -184,6 +312,55 @@ export default function HeroSection() {
     return () => ctx.revert();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Cinematic reveal scroll animation ────────────────────
+  useEffect(() => {
+    const wrap    = cinematicWrap.current;
+    const overlay = cinematicOverlay.current;
+    const text    = cinematicText.current;
+    if (!wrap || !overlay || !text) return;
+
+    // Set GSAP-owned initial states (keeps React inline styles clean)
+    gsap.set(wrap,    { top: "6%", right: "7.5%", bottom: "6%", left: "7.5%", borderRadius: 20 });
+    gsap.set(overlay, { opacity: 0 });
+    gsap.set(text,    { opacity: 0, y: 52 });
+
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: cinematicRef.current,
+        start: "top top",
+        end: "+=350%",
+        scrub: 1.2,
+        pin: true,
+        anticipatePin: 1,
+      },
+    });
+
+    // Phase 1 (0 → 40 %): image card expands to fill screen
+    tl.to(wrap, {
+      top: 0, right: 0, bottom: 0, left: 0,
+      borderRadius: 0,
+      ease: "none",
+      duration: 40,
+    }, 0);
+
+    // Phase 2 (40 → 70 %): dark gradient overlay appears
+    tl.to(overlay, {
+      opacity: 1,
+      ease: "none",
+      duration: 30,
+    }, 40);
+
+    // Phase 3 (70 → 100 %): text rises from bottom
+    tl.to(text, {
+      opacity: 1,
+      y: 0,
+      ease: "none",
+      duration: 30,
+    }, 70);
+
+    return () => { tl.scrollTrigger?.kill(); tl.kill(); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <>
       {/* ════════════════════════════════════════════════════════
@@ -217,24 +394,73 @@ export default function HeroSection() {
       ════════════════════════════════════════════════════════ */}
       <section data-nav-theme="dark" className="relative w-full h-screen overflow-hidden bg-[#030304]">
 
-        {/* ── Video — plays once, holds last frame ─────────── */}
-        {/* Mobile */}
-        <video
-          className="block md:hidden absolute inset-0 w-full h-full object-cover"
-          autoPlay muted playsInline
-        >
-          <source src="/banner-mobile.mp4" type="video/mp4" />
-        </video>
-        {/* Desktop */}
-        <video
-          className="hidden md:block absolute inset-0 w-full h-full object-cover"
-          autoPlay muted playsInline
-        >
-          <source src="/banner-desktop.mp4" type="video/mp4" />
-        </video>
+        {/* ── Carousel slides ──────────────────────────────── */}
+        {SLIDES.map((slide, i) => (
+          <div
+            key={i}
+            className="absolute inset-0"
+            style={{
+              opacity: i === currentSlide ? 1 : 0,
+              transition: "opacity 1000ms ease",
+              zIndex: 1,
+            }}
+          >
+            {slide.type === "video" ? (
+              <>
+                {/* Mobile */}
+                <video
+                  ref={(el) => {
+                    if (!videoRefsMap.current[i]) videoRefsMap.current[i] = [];
+                    videoRefsMap.current[i][0] = el;
+                  }}
+                  className="block md:hidden w-full h-full object-cover"
+                  autoPlay muted playsInline
+                  onEnded={handleVideoEnded}
+                >
+                  <source src={slide.src.mobile} type="video/mp4" />
+                </video>
+                {/* Desktop */}
+                <video
+                  ref={(el) => {
+                    if (!videoRefsMap.current[i]) videoRefsMap.current[i] = [];
+                    videoRefsMap.current[i][1] = el;
+                  }}
+                  className="hidden md:block w-full h-full object-cover"
+                  autoPlay muted playsInline
+                  onEnded={handleVideoEnded}
+                >
+                  <source src={slide.src.desktop} type="video/mp4" />
+                </video>
+              </>
+            ) : (
+              <>
+                {/* Mobile */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  className="block md:hidden w-full h-full object-cover"
+                  src={slide.src.mobile}
+                  alt=""
+                />
+                {/* Desktop */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  className="hidden md:block w-full h-full object-cover"
+                  src={slide.src.desktop}
+                  alt=""
+                />
+              </>
+            )}
+          </div>
+        ))}
 
-        {/* ── Dark gradient scrim so text reads cleanly ─────── */}
-        <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#030304]/80 via-transparent to-transparent" />
+        {/* ── Gradient overlay — same as cinematic, fades in with text ── */}
+        <div
+          className="absolute inset-0 z-10 transition-opacity duration-1000"
+          style={{
+            background: "linear-gradient(to top, rgba(3,3,4,1) 0%, rgba(3,3,4,0.75) 35%, rgba(3,3,4,0.35) 65%, transparent 100%)",
+            opacity: heroTextVisible ? 1 : 0,
+          }}
+        />
 
         {/* ── Text + CTA ───────────────────────────────────── */}
         <div
@@ -290,13 +516,13 @@ export default function HeroSection() {
           className="absolute z-20 bottom-[60px] md:bottom-[72px] flex items-center gap-2 transition-all duration-1000 delay-200"
           style={{ left: "20px", opacity: heroTextVisible ? 1 : 0, transform: heroTextVisible ? "translateY(0px)" : "translateY(16px)" }}
         >
-          {[0, 1, 2].map((i) => (
+          {SLIDES.map((_, i) => (
             <div
               key={i}
               className="h-px transition-all duration-300"
               style={{
-                width: i === 0 ? "40px" : "20px",
-                background: i === 0 ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.25)",
+                width: i === currentSlide ? "40px" : "20px",
+                background: i === currentSlide ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.25)",
               }}
             />
           ))}
@@ -374,6 +600,79 @@ export default function HeroSection() {
             This isn&apos;t just an engine being assembled. It&apos;s performance
             being engineered in real time.
           </p>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════
+          SECTION: Cinematic reveal — image expands to full screen
+          Replace /banner-2.png with a landscape hero image for
+          best results (e.g. /cinematic.jpg)
+      ════════════════════════════════════════════════════════ */}
+      <section
+        ref={cinematicRef}
+        data-nav-theme="dark"
+        className="relative w-full h-screen overflow-hidden bg-[#030304]"
+      >
+        {/* ── Image card — starts inset 85 % wide, expands via GSAP ── */}
+        <div
+          ref={cinematicWrap}
+          className="absolute overflow-hidden"
+          /* initial top/right/bottom/left + borderRadius set by GSAP */
+        >
+          {/* Background image */}
+          <NextImage
+            src="/cinematic.jpg"
+            alt="Edgar Canet — KTM Dakar Rally 2026, Stage 11"
+            fill
+            sizes="100vw"
+            style={{ objectFit: "cover", objectPosition: "center top" }}
+            priority={false}
+          />
+
+          {/* ── Gradient overlay — fades in after expansion ──── */}
+          <div
+            ref={cinematicOverlay}
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(to top, rgba(3,3,4,1) 0%, rgba(3,3,4,0.75) 35%, rgba(3,3,4,0.35) 65%, transparent 100%)",
+            }}
+          />
+
+          {/* ── Text — rises from centre after overlay ──────── */}
+          <div
+            ref={cinematicText}
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 text-center px-6"
+          >
+            <h2
+              className="font-[800] leading-[1.05]"
+              style={{
+                fontFamily: "var(--font-blender), sans-serif",
+                color: "rgba(255,255,255,0.95)",
+                fontSize: "clamp(32px, 5.5vw, 72px)",
+              }}
+            >
+              Experiences to make
+              <br />
+              you a pro!
+            </h2>
+
+            {/* CTA button */}
+            <button
+              className="mt-2 flex items-center gap-3 px-7 text-[14px] font-medium tracking-[0.15em] uppercase transition-all duration-300 hover:gap-5"
+              style={{
+                fontFamily: "var(--font-blender), sans-serif",
+                color: "#030304",
+                background: ORANGE,
+                height: "56px",
+              }}
+            >
+              Join the PRO-XP
+              <svg width="14" height="10" viewBox="0 0 14 10" fill="none">
+                <path d="M1 5h12M8 1l5 4-5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -475,7 +774,7 @@ export default function HeroSection() {
                       style={{
                         fontFamily: "var(--font-blender), sans-serif",
                         color: "rgba(255,255,255,0.92)",
-                        fontSize: "clamp(24px, 2.5vw, 32px)",
+                        fontSize: "20px",
                       }}
                     >
                       {person.name}
@@ -487,22 +786,22 @@ export default function HeroSection() {
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center gap-3 select-none"
                   style={{
-                    background: "#0f0f0f",
+                    background: "#FD4B00",
                     padding: "28px 16px 36px",
                     opacity: flipped[i] ? 1 : 0,
                     visibility: flipped[i] ? "visible" : "hidden",
                     transition: "none",
                   }}
                 >
-                  {/* Orange accent bar */}
-                  <div style={{ width: "32px", height: "2px", background: ORANGE, flexShrink: 0 }} />
+                  {/* Dark accent bar */}
+                  <div style={{ width: "32px", height: "2px", background: "rgba(0,0,0,0.45)", flexShrink: 0 }} />
 
-                  {/* Eyebrow */}
+                  {/* Type eyebrow */}
                   <p
-                    className="text-[11px] font-medium tracking-[0.25em] uppercase text-center"
-                    style={{ fontFamily: "var(--font-blender), sans-serif", color: ORANGE }}
+                    className="text-[16px] font-medium tracking-[0.25em] uppercase text-center"
+                    style={{ fontFamily: "var(--font-blender), sans-serif", color: "rgba(0,0,0,0.55)" }}
                   >
-                    KTM Expert Trainer
+                    {person.type}
                   </p>
 
                   {/* Name */}
@@ -510,27 +809,37 @@ export default function HeroSection() {
                     className="font-[800] leading-tight text-center"
                     style={{
                       fontFamily: "var(--font-blender), sans-serif",
-                      color: "rgba(255,255,255,0.95)",
-                      fontSize: "clamp(20px, 2vw, 28px)",
+                      color: "rgba(0,0,0,0.92)",
+                      fontSize: "20px",
                     }}
                   >
                     {person.name}
                   </p>
 
-                  {/* Expertise */}
+                  {/* Role */}
                   <p
-                    className="text-[13px] font-light leading-[1.6] text-center"
-                    style={{ fontFamily: "var(--font-blender), sans-serif", color: "rgba(255,255,255,0.45)" }}
+                    className="text-[16px] font-medium leading-[1.5] text-center"
+                    style={{ fontFamily: "var(--font-blender), sans-serif", color: "rgba(0,0,0,0.72)" }}
                   >
-                    {person.expertise}
+                    {person.role}
                   </p>
+
+                  {/* Desc */}
+                  {person.desc ? (
+                    <p
+                      className="text-[16px] font-light leading-[1.6] text-center"
+                      style={{ fontFamily: "var(--font-blender), sans-serif", color: "rgba(0,0,0,0.52)" }}
+                    >
+                      {person.desc}
+                    </p>
+                  ) : null}
 
                   {/* Tap-to-return hint */}
                   <p
                     className="text-[9px] tracking-[0.22em] uppercase text-center"
                     style={{
                       fontFamily: "var(--font-blender), sans-serif",
-                      color: "rgba(255,255,255,0.18)",
+                      color: "rgba(0,0,0,0.28)",
                       marginTop: "auto",
                       paddingTop: "20px",
                     }}
@@ -549,6 +858,109 @@ export default function HeroSection() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════
+          SECTION 4 — For Speed / For Adventure  (white bg)
+      ════════════════════════════════════════════════════════ */}
+      <section data-nav-theme="light" className="w-full bg-white overflow-hidden relative">
+
+        {/* ── Shared diamond background — spans full width ─── */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/diamond-bg.png"
+          alt=""
+          aria-hidden
+          className="absolute inset-0 w-full h-full pointer-events-none select-none"
+          style={{ objectFit: "cover", objectPosition: "center", zIndex: 0 }}
+        />
+
+        <div
+          className="relative grid grid-cols-2 px-5 md:px-[200px] py-12 md:py-[120px]"
+          style={{ zIndex: 1 }}
+        >
+
+          {/* ── Left: FOR SPEED — text left, helmet bleeds left ── */}
+          <div className="relative flex flex-col">
+            <div className="relative z-10 pt-12 md:pt-16 px-5 md:px-10 flex flex-col items-start">
+              <div style={{ letterSpacing: "0.02em" }}>
+                <p style={{ fontFamily: "var(--font-blender), sans-serif", fontSize: "clamp(28px, 3.8vw, 52px)", fontWeight: 800, color: "#000", lineHeight: 1 }}>
+                  FOR THE TRACK
+                </p>
+              </div>
+              <p className="mt-2" style={{ fontFamily: "var(--font-blender), sans-serif", fontSize: "16px", fontWeight: 300, color: "#000", lineHeight: 1.6, maxWidth: "260px" }}>
+                Multi-stage racing championship that brings together riders from across India.
+              </p>
+              <button aria-label="Learn more about For Speed" className="flex items-center justify-center mt-6" style={{ width: "32px", height: "32px", background: "#EC631E", flexShrink: 0 }}>
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
+                  <path d="M1 10L10 1M10 1H3M10 1V8" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Track helmet → bike on hover */}
+            <div
+              className="relative cursor-pointer"
+              style={{ marginTop: "24px", marginLeft: "-14%", width: "100%" }}
+              onMouseEnter={() => handleHelmetEnter(0)}
+              onMouseLeave={() => handleHelmetLeave(0)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={helmetFlipped[0] ? "/bike-track.png" : "/helmet-speed.png"}
+                alt=""
+                style={{ width: "100%", display: "block", transform: "rotate(8deg)", transformOrigin: "center bottom" }}
+              />
+              <PixelCard
+                ref={(el) => { helmetPixelRefs.current[0] = el; }}
+                variant="ktm"
+                noHover
+                className="pixel-card-overlay"
+              />
+            </div>
+          </div>
+
+          {/* ── Right: FOR ADVENTURE — text right, helmet bleeds right ── */}
+          <div className="relative flex flex-col items-end">
+            <div className="relative z-10 pt-12 md:pt-16 px-5 md:px-10 flex flex-col items-end w-full" style={{ textAlign: "right" }}>
+              <div style={{ letterSpacing: "0.02em" }}>
+                <p style={{ fontFamily: "var(--font-blender), sans-serif", fontSize: "clamp(28px, 3.8vw, 52px)", fontWeight: 800, color: "#000", lineHeight: 1 }}>
+                  FOR THE WILD
+                </p>
+              </div>
+              <p className="mt-2" style={{ fontFamily: "var(--font-blender), sans-serif", fontSize: "16px", fontWeight: 300, color: "#000", lineHeight: 1.6, maxWidth: "260px", textAlign: "right" }}>
+                Closed-Circuit Off-Road training program designed by KTM Adventure Experts.
+              </p>
+              <button aria-label="Learn more about For Adventure" className="flex items-center justify-center mt-6" style={{ width: "32px", height: "32px", background: "#EC631E", flexShrink: 0 }}>
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
+                  <path d="M1 10L10 1M10 1H3M10 1V8" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Wild helmet → bike on hover */}
+            <div
+              className="relative cursor-pointer"
+              style={{ marginTop: "24px", marginRight: "-14%", width: "100%" }}
+              onMouseEnter={() => handleHelmetEnter(1)}
+              onMouseLeave={() => handleHelmetLeave(1)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={helmetFlipped[1] ? "/bike-wild.png" : "/helmet-adventure.png"}
+                alt=""
+                style={{ width: "100%", display: "block", transform: "rotate(-5.56deg)", transformOrigin: "center bottom" }}
+              />
+              <PixelCard
+                ref={(el) => { helmetPixelRefs.current[1] = el; }}
+                variant="ktm"
+                noHover
+                className="pixel-card-overlay"
+              />
+            </div>
+          </div>
+
         </div>
       </section>
     </>

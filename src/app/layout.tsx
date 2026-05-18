@@ -29,6 +29,7 @@ export default function RootLayout({
       <body
         className="bg-[#030304] text-white antialiased overflow-x-hidden"
         style={{ fontFamily: "var(--font-blender), system-ui, sans-serif" }}
+        suppressHydrationWarning
       >
         {children}
       </body>
