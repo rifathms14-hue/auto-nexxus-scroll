@@ -7,8 +7,8 @@ import ScrollTrigger from "gsap/ScrollTrigger";
 gsap.registerPlugin(ScrollTrigger);
 
 const TOTAL_FRAMES = 193;
-const FRAME_PATH = (i: number) =>
-  `/frames/frame_${String(i).padStart(4, "0")}.jpg`;
+const FRAME_PATH        = (i: number) => `/frames/frame_${String(i).padStart(4, "0")}.jpg`;
+const FRAME_PATH_MOBILE = (i: number) => `/frames-mobile/frame_${String(i).padStart(4, "0")}.jpg`;
 
 const TEXT_WINDOWS = {
   set1: { revealS: 0.02, revealE: 0.14, fadeS: 0.38, fadeE: 0.50 },
@@ -23,7 +23,6 @@ export default function HeroSection() {
   const canvasRef      = useRef<HTMLCanvasElement>(null);
   const frameRef       = useRef({ current: 0 });
   const imagesRef      = useRef<HTMLImageElement[]>([]);
-  const mobileVideoRef = useRef<HTMLVideoElement>(null);
 
   // ── Loading state ─────────────────────────────────────────
   const [loadedCount, setLoadedCount]   = useState(0);
@@ -68,11 +67,13 @@ export default function HeroSection() {
     return () => clearTimeout(t);
   }, [loadingDone]);
 
-  // ── Preload all frames ────────────────────────────────────
+  // ── Preload all frames (mobile or desktop set) ───────────
   useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    const path = isMobile ? FRAME_PATH_MOBILE : FRAME_PATH;
     imagesRef.current = Array.from({ length: TOTAL_FRAMES }, (_, i) => {
       const img = new Image();
-      img.src = FRAME_PATH(i + 1);
+      img.src = path(i + 1);
       img.onload = () => {
         setLoadedCount((c) => {
           if (i === 0) drawFrame(0);
@@ -83,16 +84,20 @@ export default function HeroSection() {
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Size canvas: 100vw mobile, 52vw desktop ───────────────
+  // ── Size canvas: 80vw portrait on mobile, 42vw landscape on desktop ──
   useEffect(() => {
     const resize = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const isMobile = window.innerWidth < 768;
-      const w = isMobile
-        ? window.innerWidth
-        : Math.round(window.innerWidth * 0.52);
-      const h = Math.round(w * (720 / 1280));
+      let w: number, h: number;
+      if (isMobile) {
+        w = Math.round(window.innerWidth * 0.80);
+        h = Math.round(w * (960 / 540)); // portrait 9:16
+      } else {
+        w = Math.round(window.innerWidth * 0.42);
+        h = Math.round(w * (720 / 1280)); // landscape 16:9
+      }
       canvas.width  = w;
       canvas.height = h;
       drawFrame(frameRef.current.current);
@@ -123,12 +128,6 @@ export default function HeroSection() {
           if (target !== frameRef.current.current) {
             frameRef.current.current = target;
             drawFrame(target);
-          }
-
-          // ── Mobile: video time scrub ─────────────────────────
-          const mv = mobileVideoRef.current;
-          if (mv && mv.readyState >= 2 && mv.duration) {
-            mv.currentTime = p * mv.duration;
           }
 
           applyBlurTransition(s1Eyebrow.current, p, TEXT_WINDOWS.set1, 0);
@@ -271,22 +270,10 @@ export default function HeroSection() {
         ref={engineRef}
         className="relative w-full h-screen overflow-hidden bg-[#030304]"
       >
-        {/* ── Mobile: video scrub ──────────────────────────────── */}
-        <video
-          ref={mobileVideoRef}
-          className="block md:hidden absolute inset-0 w-full h-full object-cover z-10"
-          muted
-          playsInline
-          preload="auto"
-          style={{ mixBlendMode: "hard-light" }}
-        >
-          <source src="/engine-assy-mobile.mp4" type="video/mp4" />
-        </video>
-
-        {/* ── Desktop: canvas frame scrub ──────────────────────── */}
+        {/* ── Canvas (mobile: 80vw portrait | desktop: 42vw landscape) ── */}
         <canvas
           ref={canvasRef}
-          className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10"
           style={{ mixBlendMode: "hard-light" }}
         />
 
