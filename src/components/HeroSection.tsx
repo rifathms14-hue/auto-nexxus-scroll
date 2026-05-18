@@ -159,20 +159,85 @@ export default function HeroSection() {
           SECTION 1 — Banner video hero
       ════════════════════════════════════════════════════════ */}
       <section className="relative w-full h-screen overflow-hidden bg-[#030304]">
+
+        {/* ── Video — plays once, holds last frame ─────────── */}
         {/* Mobile */}
         <video
-          className="block md:hidden w-full h-full object-cover"
-          autoPlay loop muted playsInline
+          className="block md:hidden absolute inset-0 w-full h-full object-cover"
+          autoPlay muted playsInline
         >
           <source src="/banner-mobile.mp4" type="video/mp4" />
         </video>
         {/* Desktop */}
         <video
-          className="hidden md:block w-full h-full object-cover"
-          autoPlay loop muted playsInline
+          className="hidden md:block absolute inset-0 w-full h-full object-cover"
+          autoPlay muted playsInline
         >
           <source src="/banner-desktop.mp4" type="video/mp4" />
         </video>
+
+        {/* ── Dark gradient scrim so text reads cleanly ─────── */}
+        <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#030304]/80 via-transparent to-transparent" />
+
+        {/* ── Text + CTA ───────────────────────────────────── */}
+        <div className="absolute z-20 bottom-[140px] md:bottom-[160px] left-8 md:left-[200px] flex flex-col gap-4 max-w-[320px] md:max-w-[520px] select-none">
+          <p
+            className="text-[11px] md:text-[13px] font-medium tracking-[0.25em] uppercase"
+            style={{ fontFamily: "var(--font-blender), sans-serif", color: ORANGE }}
+          >
+            KTM RC 390
+          </p>
+
+          <h1
+            className="text-[36px] md:text-[64px] font-[800] leading-[1.05]"
+            style={{ fontFamily: "var(--font-blender), sans-serif", color: "hsla(0,0%,100%,0.95)" }}
+          >
+            Born on the Track.
+          </h1>
+
+          <p
+            className="text-[14px] md:text-[17px] font-light leading-[1.6]"
+            style={{ fontFamily: "var(--font-blender), sans-serif", color: "hsla(0,0%,100%,0.55)" }}
+          >
+            Precision-engineered performance, built layer by layer for those who demand more from every ride.
+          </p>
+
+          <button
+            className="mt-2 self-start flex items-center gap-3 px-7 py-3 text-[13px] md:text-[14px] font-medium tracking-[0.15em] uppercase transition-all duration-300 hover:gap-5"
+            style={{
+              fontFamily: "var(--font-blender), sans-serif",
+              color: "#030304",
+              background: ORANGE,
+              letterSpacing: "0.15em",
+            }}
+          >
+            Explore
+            <svg width="14" height="10" viewBox="0 0 14 10" fill="none">
+              <path d="M1 5h12M8 1l5 4-5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* ── Carousel indicator ────────────────────────────── */}
+        <div className="absolute z-20 bottom-[60px] md:bottom-[72px] left-8 md:left-[200px] flex items-center gap-2">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-px transition-all duration-300"
+              style={{
+                width: i === 0 ? "40px" : "20px",
+                background: i === 0 ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.25)",
+              }}
+            />
+          ))}
+          <span
+            className="ml-3 text-[10px] tracking-[0.2em] uppercase"
+            style={{ fontFamily: "var(--font-blender), sans-serif", color: "rgba(255,255,255,0.3)" }}
+          >
+            01 / 03
+          </span>
+        </div>
+
       </section>
 
       {/* ════════════════════════════════════════════════════════
