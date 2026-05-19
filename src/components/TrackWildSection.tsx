@@ -32,7 +32,6 @@ const CFG = {
   lerp:       0.06,
   parallaxX:  2.5,
   parallaxY:  3.0,
-  parallaxZ:  18,
   shadowBaseY:    14,
   shadowBaseBlur: 22,
   shadowTiltMul:  0.4,
@@ -80,7 +79,6 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
 
       const tx =  cY * CFG.parallaxX;
       const ty = -cX * CFG.parallaxY;
-      const tz =  mag * CFG.parallaxZ;  // depth — helmet floats toward viewer as tilt increases
 
       const shadowX    = (-cY * 0.55).toFixed(1);
       const shadowY    = (CFG.shadowBaseY + cX * 0.4).toFixed(1);
@@ -93,7 +91,6 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
           `perspective(850px)`,
           `translateX(${tx.toFixed(2)}px)`,
           `translateY(${ty.toFixed(2)}px)`,
-          `translateZ(${tz.toFixed(2)}px)`,
           `rotateX(${cX.toFixed(3)}deg)`,
           `rotateY(${cY.toFixed(3)}deg)`,
         ].join(" ");
