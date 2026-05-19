@@ -128,6 +128,7 @@ export default function HeroSection() {
   // videoRefsMap[slideIndex][0=mobile, 1=desktop]
   const videoRefsMap  = useRef<(HTMLVideoElement | null)[][]>([]);
   const videoEndedRef = useRef(false); // dedup: prevent both mobile+desktop onEnded firing twice
+  const swipeTouchX   = useRef<number | null>(null); // swipe gesture start X
 
   // ── People-card flip state ────────────────────────────────
   const [flipped, setFlipped]   = useState<boolean[]>(Array(8).fill(false));
@@ -161,6 +162,25 @@ export default function HeroSection() {
     videoEndedRef.current = true;
     setTimeout(() => { videoEndedRef.current = false; }, 300);
     setCurrentSlide(prev => (prev + 1) % SLIDES.length);
+  }, []);
+
+  // ── Swipe handlers for carousel ───────────────────────────────────────────
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    swipeTouchX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (swipeTouchX.current === null) return;
+    const delta = swipeTouchX.current - e.changedTouches[0].clientX;
+    swipeTouchX.current = null;
+    if (Math.abs(delta) < 50) return; // ignore taps / micro-drags
+    if (delta > 0) {
+      // swiped left → next slide
+      setCurrentSlide(prev => (prev + 1) % SLIDES.length);
+    } else {
+      // swiped right → previous slide
+      setCurrentSlide(prev => (prev - 1 + SLIDES.length) % SLIDES.length);
+    }
   }, []);
 
   // ── Text set 1 refs ───────────────────────────────────────
@@ -393,7 +413,12 @@ export default function HeroSection() {
       {/* ════════════════════════════════════════════════════════
           SECTION 1 — Banner video hero
       ════════════════════════════════════════════════════════ */}
-      <section data-nav-theme="dark" className="relative w-full h-screen overflow-hidden bg-[#030304]">
+      <section
+        data-nav-theme="dark"
+        className="relative w-full h-screen overflow-hidden bg-[#030304]"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
 
         {/* ── Carousel slides ──────────────────────────────── */}
         {SLIDES.map((slide, i) => (
@@ -787,7 +812,7 @@ export default function HeroSection() {
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center gap-3 select-none"
                   style={{
-                    background: "#FD4B00",
+                    background: "#FF6600",
                     padding: "28px 16px 36px",
                     opacity: flipped[i] ? 1 : 0,
                     visibility: flipped[i] ? "visible" : "hidden",
