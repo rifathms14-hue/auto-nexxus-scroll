@@ -29,7 +29,7 @@ export default function Navbar() {
   return (
     <nav
       className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between transition-colors duration-300"
-      style={{ background: bg, height: "64px", padding: "0 20px" }}
+      style={{ background: bg, height: "64px", padding: "0 0 0 20px" }}
     >
       {/* ── Left: Hamburger ───────────────────────────────────── */}
       <button
