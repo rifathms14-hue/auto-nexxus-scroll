@@ -297,35 +297,35 @@ export default function HeroSection() {
       scrollTrigger: {
         trigger: cinematicRef.current,
         start: "top top",
-        end: "+=350%",
-        scrub: 1.2,
+        end: "+=200%",   // ~2 viewport heights = 2-3 scroll gestures
+        scrub: 0.8,
         pin: true,
         anticipatePin: 1,
       },
     });
 
-    // Phase 1 (0 → 40 %): image card expands to fill screen
+    // Scroll 1 (0 → 33 %): image card expands to fill screen
     tl.to(wrap, {
       top: 0, right: 0, bottom: 0, left: 0,
       borderRadius: 0,
       ease: "none",
-      duration: 40,
+      duration: 33,
     }, 0);
 
-    // Phase 2 (40 → 70 %): dark gradient overlay appears
+    // Scroll 2 (33 → 66 %): dark gradient overlay appears
     tl.to(overlay, {
       opacity: 1,
       ease: "none",
-      duration: 30,
-    }, 40);
+      duration: 33,
+    }, 33);
 
-    // Phase 3 (70 → 100 %): text rises from bottom
+    // Scroll 3 (66 → 100 %): text rises in
     tl.to(text, {
       opacity: 1,
       y: 0,
       ease: "none",
-      duration: 30,
-    }, 70);
+      duration: 34,
+    }, 66);
 
     return () => { tl.scrollTrigger?.kill(); tl.kill(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
