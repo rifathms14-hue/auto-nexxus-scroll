@@ -20,6 +20,13 @@
   }
 }
 
+@media (min-width: 720px) {
+  .ktw-section {
+    padding-left: 200px;
+    padding-right: 200px;
+  }
+}
+
 /* ── Always 2-column grid — face-off on all breakpoints ─────── */
 .ktw-grid {
   display: grid;

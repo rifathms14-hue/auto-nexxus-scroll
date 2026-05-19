@@ -26,16 +26,16 @@ const CARDS = [
 
 // ─── Tilt config ──────────────────────────────────────────────────────────────
 const CFG = {
-  maxRotX:    5,
-  maxRotY:    5,    // reduced — less left/right distort
+  maxRotX:    9,
+  maxRotY:    8,
   betaOffset: 62,
-  lerp:       0.04,
-  parallaxX:  1.0,  // reduced lateral translate
-  parallaxY:  1.4,  // stronger vertical float
-  parallaxZ:  8,    // new: depth push as tilt magnitude grows
+  lerp:       0.06,
+  parallaxX:  2.5,
+  parallaxY:  3.0,
+  parallaxZ:  18,
   shadowBaseY:    14,
   shadowBaseBlur: 22,
-  shadowTiltMul:  0.3,
+  shadowTiltMul:  0.4,
 };
 
 type DOEStatic = typeof DeviceOrientationEvent & {
@@ -53,9 +53,9 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
   // ── Stable orientation handler ─────────────────────────────────────────────
   const handleOrientation = useCallback((e: DeviceOrientationEvent) => {
     if (e.gamma === null || e.beta === null) return;
-    tiltState.current.targetY = clamp(e.gamma * 0.28, -CFG.maxRotY, CFG.maxRotY);
+    tiltState.current.targetY = clamp(e.gamma * 0.45, -CFG.maxRotY, CFG.maxRotY);
     tiltState.current.targetX = clamp(
-      -(e.beta - CFG.betaOffset) * 0.28, -CFG.maxRotX, CFG.maxRotX,
+      -(e.beta - CFG.betaOffset) * 0.38, -CFG.maxRotX, CFG.maxRotX,
     );
   }, []);
 
