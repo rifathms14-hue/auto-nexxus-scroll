@@ -63,7 +63,7 @@ export default function Navbar() {
         <img
           src="/ktm-logo.jpg"
           alt="KTM"
-          className="w-auto h-14 md:h-16 object-contain"
+          className="w-auto h-16 object-contain"
         />
       </div>
     </nav>

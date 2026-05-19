@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import NextImage from "next/image";
+import TiltedCard, { type TiltedCardHandle } from "./TiltedCard";
 import "./TrackWildSection.css";
 
 // ─── Card data ────────────────────────────────────────────────────────────────
@@ -17,7 +17,6 @@ const CARDS = [
   {
     id: "wild",
     align: "right" as const,
-    flip: false,
     heading: ["FOR THE", "WILD"],
     copy: "Closed-Circuit Off-Road training program designed by KTM Adventure Experts.",
     ariaLabel: "For the Wild — explore off-road training",
@@ -30,12 +29,6 @@ const CFG = {
   maxRotX:    6,
   maxRotY:    9,
   betaOffset: 62,
-  lerp:       0.04,
-  parallaxX:  1.5,
-  parallaxY:  0.8,
-  shadowBaseY:    14,
-  shadowBaseBlur: 22,
-  shadowTiltMul:  0.3,
 };
 
 type DOEStatic = typeof DeviceOrientationEvent & {
@@ -44,72 +37,18 @@ type DOEStatic = typeof DeviceOrientationEvent & {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function TrackWildSection({ stacked = false }: { stacked?: boolean }) {
-  const helmetRefs   = useRef<(HTMLDivElement | null)[]>([]);
-  const tiltState    = useRef({ targetX: 0, currentX: 0, targetY: 0, currentY: 0 });
-  const rafRef       = useRef<number>(0);
-
-  // iOS-specific: show a tap-to-enable prompt
+  const tiltedCardRefs = useRef<(TiltedCardHandle | null)[]>([]);
   const [showIOSPrompt, setShowIOSPrompt] = useState(false);
 
-  // ── Stable orientation handler ──────────────────────────────────────────────
+  // ── Stable orientation handler ─────────────────────────────────────────────
   const handleOrientation = useCallback((e: DeviceOrientationEvent) => {
     if (e.gamma === null || e.beta === null) return;
-    tiltState.current.targetY = clamp(e.gamma * 0.38, -CFG.maxRotY, CFG.maxRotY);
-    tiltState.current.targetX = clamp(
-      -(e.beta - CFG.betaOffset) * 0.28, -CFG.maxRotX, CFG.maxRotX,
-    );
+    const rx = clamp(-(e.beta - CFG.betaOffset) * 0.28, -CFG.maxRotX, CFG.maxRotX);
+    const ry = clamp(e.gamma * 0.38, -CFG.maxRotY, CFG.maxRotY);
+    tiltedCardRefs.current.forEach(card => card?.setGyro(rx, ry));
   }, []);
 
-  // ── RAF loop — runs as long as component is mounted ─────────────────────────
-  // Keeps animating at (0,0) until sensor data arrives — no visible jump.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    let active = true;
-
-    const tick = () => {
-      if (!active) return;
-      rafRef.current = requestAnimationFrame(tick);
-
-      const s   = tiltState.current;
-      s.currentX += (s.targetX - s.currentX) * CFG.lerp;
-      s.currentY += (s.targetY - s.currentY) * CFG.lerp;
-
-      const cX  = s.currentX;
-      const cY  = s.currentY;
-      const mag = Math.sqrt(cX * cX + cY * cY);
-
-      const tx =  cY * CFG.parallaxX;
-      const ty = -cX * CFG.parallaxY;
-
-      const shadowX    = (-cY * 0.55).toFixed(1);
-      const shadowY    = (CFG.shadowBaseY + cX * 0.4).toFixed(1);
-      const shadowBlur = (CFG.shadowBaseBlur + mag * CFG.shadowTiltMul).toFixed(1);
-      const shadowA    = (0.18 + mag * 0.008).toFixed(3);
-
-      helmetRefs.current.forEach((el) => {
-        if (!el) return;
-        el.style.transform = [
-          `perspective(850px)`,
-          `translateX(${tx.toFixed(2)}px)`,
-          `translateY(${ty.toFixed(2)}px)`,
-          `rotateX(${cX.toFixed(3)}deg)`,
-          `rotateY(${cY.toFixed(3)}deg)`,
-        ].join(" ");
-        el.style.filter =
-          `drop-shadow(${shadowX}px ${shadowY}px ${shadowBlur}px rgba(0,0,0,${shadowA}))`;
-      });
-    };
-
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      active = false;
-      cancelAnimationFrame(rafRef.current);
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Sensor setup — separate from RAF loop ───────────────────────────────────
+  // ── Sensor setup ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (typeof DeviceOrientationEvent === "undefined") return;
@@ -118,22 +57,29 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
     const DOE = DeviceOrientationEvent as DOEStatic;
 
     if (typeof DOE.requestPermission === "function") {
-      // iOS 13+ — permission MUST come from a direct user click (not touchstart).
-      // Show a branded tap prompt; the onClick calls requestPermission() directly.
-      setShowIOSPrompt(true);
+      if (stacked) {
+        // Stacked section: wait for face-off to grant permission via custom event
+        const onGranted = () => {
+          window.addEventListener("deviceorientation", handleOrientation, { passive: true });
+        };
+        window.addEventListener("ktw-gyro-granted", onGranted, { once: true });
+        return () => {
+          window.removeEventListener("ktw-gyro-granted", onGranted);
+          window.removeEventListener("deviceorientation", handleOrientation);
+        };
+      } else {
+        setShowIOSPrompt(true);
+      }
     } else {
-      // Android / non-iOS — no permission dialog needed.
       window.addEventListener("deviceorientation", handleOrientation, { passive: true });
     }
 
     return () => {
       window.removeEventListener("deviceorientation", handleOrientation);
     };
-  }, [handleOrientation]);
+  }, [handleOrientation, stacked]);
 
-  // ── iOS permission: called synchronously from button onClick ────────────────
-  // Safari only accepts requestPermission() when it's the DIRECT result of a
-  // user interaction (click/tap). Anything async or deferred is rejected.
+  // ── iOS permission: called synchronously from button onClick ───────────────
   const requestIOSPermission = useCallback(async () => {
     const DOE = DeviceOrientationEvent as DOEStatic;
     if (typeof DOE.requestPermission !== "function") return;
@@ -141,9 +87,10 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
       const result = await DOE.requestPermission();
       if (result === "granted") {
         window.addEventListener("deviceorientation", handleOrientation, { passive: true });
+        window.dispatchEvent(new CustomEvent("ktw-gyro-granted"));
       }
     } catch {
-      // Permission denied or not available — fail silently, hide prompt
+      // Permission denied — fail silently
     }
     setShowIOSPrompt(false);
   }, [handleOrientation]);
@@ -186,18 +133,14 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
 
             {/* ── Helmet stage ─────────────────────────────────── */}
             <div className="ktw-stage">
-              <div
-                ref={(el) => { helmetRefs.current[i] = el; }}
-                className={`ktw-helmet-wrap${stacked ? " ktw-helmet-wrap--stacked" : ""}`}
-              >
-                <NextImage
-                  src={card.helmet.src}
-                  alt={card.helmet.alt}
-                  width={600}
-                  height={600}
-                  loading="lazy"
-                  sizes="(max-width: 719px) calc(50vw + 20px), 44vw"
-                  style={{ width: "100%", height: "auto" }}
+              <div className={`ktw-helmet-wrap${stacked ? " ktw-helmet-wrap--stacked" : ""}`}>
+                <TiltedCard
+                  ref={(el) => { tiltedCardRefs.current[i] = el; }}
+                  imageSrc={card.helmet.src}
+                  altText={card.helmet.alt}
+                  rotateAmplitude={9}
+                  scaleOnHover={1.04}
+                  showTooltip={false}
                 />
               </div>
             </div>
@@ -205,7 +148,7 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
         ))}
       </div>
 
-      {/* iOS motion permission prompt — only shown on iOS 13+, only on face-off */}
+      {/* iOS motion permission prompt — only on face-off, only iOS 13+ */}
       {showIOSPrompt && !stacked && (
         <div className="ktw-ios-prompt">
           <button
@@ -213,7 +156,6 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
             className="ktw-ios-prompt__btn"
             aria-label="Enable gyroscope tilt effect"
           >
-            {/* Phone tilt icon */}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
               <path d="M12 18h.01" />
