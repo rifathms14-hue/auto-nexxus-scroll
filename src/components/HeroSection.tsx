@@ -119,9 +119,17 @@ export default function HeroSection() {
     setLoadingDoneState(true);
   }, []);
 
-  // ── Hero text: appears 1.2 s after loader clears ─────────
-  // (overlay CSS fade is 700 ms, so text is visible ~500 ms after fully gone)
+  // ── Hero text — driven by banner video reaching 3.5 s ──────
   const [heroTextVisible, setHeroTextVisible] = useState(false);
+  const heroTextShownRef = useRef(false); // guard: only trigger once
+
+  const handleBannerTimeUpdate = useCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
+    if (heroTextShownRef.current) return;
+    if (e.currentTarget.currentTime >= 3.5) {
+      heroTextShownRef.current = true;
+      setHeroTextVisible(true);
+    }
+  }, []);
 
   // ── Carousel state ───────────────────────────────────────
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -224,11 +232,21 @@ export default function HeroSection() {
     return () => clearTimeout(t);
   }, [triggerLoadingDone]);
 
-  // ── Reveal hero text 1.2 s after loader clears ───────────
-  // Overlay CSS fade = 700 ms, so text appears ~500 ms after fully gone
+  // ── Loader complete → start banner video ─────────────────
+  // Text comes in via onTimeUpdate at 3.5 s (strict rule).
   useEffect(() => {
     if (!loadingDone) return;
-    const t = setTimeout(() => setHeroTextVisible(true), 1200);
+    (videoRefsMap.current[0] ?? []).forEach(v => {
+      if (!v) return;
+      v.currentTime = 0;
+      v.play().catch(() => {});
+    });
+  }, [loadingDone]);
+
+  // ── Fallback: show text 6 s after loader if video never fired ────────────
+  useEffect(() => {
+    if (!loadingDone) return;
+    const t = setTimeout(() => setHeroTextVisible(true), 6000);
     return () => clearTimeout(t);
   }, [loadingDone]);
 
@@ -242,14 +260,16 @@ export default function HeroSection() {
   }, [currentSlide]);
 
   // ── Restart video from top whenever it becomes the active slide ──────────
+  // Slide 0 (banner) must NOT play until loadingDone — handled by the effect above.
   useEffect(() => {
     if (SLIDES[currentSlide].type !== "video") return;
+    if (currentSlide === 0 && !loadingDone) return;
     (videoRefsMap.current[currentSlide] ?? []).forEach(v => {
       if (!v) return;
       v.currentTime = 0;
       v.play().catch(() => {});
     });
-  }, [currentSlide]);
+  }, [currentSlide, loadingDone]);
 
   // ── Preload all frames (mobile or desktop set) ───────────
   useEffect(() => {
@@ -440,8 +460,10 @@ export default function HeroSection() {
                     videoRefsMap.current[i][0] = el;
                   }}
                   className="block md:hidden w-full h-full object-cover"
-                  autoPlay muted playsInline
+                  autoPlay={i !== 0}
+                  muted playsInline
                   onEnded={handleVideoEnded}
+                  onTimeUpdate={i === 0 ? handleBannerTimeUpdate : undefined}
                 >
                   <source src={slide.src.mobile} type="video/mp4" />
                 </video>
@@ -452,8 +474,10 @@ export default function HeroSection() {
                     videoRefsMap.current[i][1] = el;
                   }}
                   className="hidden md:block w-full h-full object-cover"
-                  autoPlay muted playsInline
+                  autoPlay={i !== 0}
+                  muted playsInline
                   onEnded={handleVideoEnded}
+                  onTimeUpdate={i === 0 ? handleBannerTimeUpdate : undefined}
                 >
                   <source src={slide.src.desktop} type="video/mp4" />
                 </video>
