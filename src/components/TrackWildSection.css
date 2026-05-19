@@ -188,10 +188,6 @@
   pointer-events: none;
 }
 
-/* Right card: flip helmet to face left (toward center) */
-.ktw-helmet-wrap--flip img {
-  transform: scaleX(-1);
-}
 
 /* ── Reduced-motion — static image, no tilt ─────────────────── */
 @media (prefers-reduced-motion: reduce) {

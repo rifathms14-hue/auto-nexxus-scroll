@@ -18,7 +18,7 @@ const CARDS = [
   {
     id: "wild",
     align: "right" as const,
-    flip: true, // mirrored so helmet faces left → face-off pose
+    flip: false,
     heading: ["FOR THE", "WILD"],
     copy: "Closed-Circuit Off-Road training program designed by KTM Adventure Experts.",
     ariaLabel: "For the Wild — explore off-road training",
