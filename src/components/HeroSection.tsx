@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import NextImage from "next/image";
 import PixelCard, { type PixelCardHandle } from "./PixelCard";
+import TrackWildSection from "./TrackWildSection";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 
@@ -115,11 +116,6 @@ export default function HeroSection() {
   const videoRefsMap  = useRef<(HTMLVideoElement | null)[][]>([]);
   const videoEndedRef = useRef(false); // dedup: prevent both mobile+desktop onEnded firing twice
 
-  // ── Helmet hover-flip state (0 = track col, 1 = wild col) ───
-  const [helmetFlipped, setHelmetFlipped] = useState([false, false]);
-  const helmetPixelRefs  = useRef<(PixelCardHandle | null)[]>([]);
-  const helmetAnimating  = useRef<Set<number>>(new Set());
-
   // ── People-card flip state ────────────────────────────────
   const [flipped, setFlipped]   = useState<boolean[]>(Array(8).fill(false));
   const pixelRefs               = useRef<(PixelCardHandle | null)[]>([]);
@@ -143,33 +139,6 @@ export default function HeroSection() {
       pRef.disappear();                               // phase 3: pixels reveal
 
       setTimeout(() => animating.current.delete(i), FLIP_MS);
-    }, FLIP_MS);
-  }, []);
-
-  // ── Helmet hover: pixel-flip helmet ↔ bike ───────────────────────────────
-  const handleHelmetEnter = useCallback((i: number) => {
-    if (helmetAnimating.current.has(i)) return;
-    const pRef = helmetPixelRefs.current[i];
-    if (!pRef) return;
-    helmetAnimating.current.add(i);
-    pRef.appear();
-    setTimeout(() => {
-      setHelmetFlipped(prev => { const n = [...prev]; n[i] = true; return n; });
-      pRef.disappear();
-      setTimeout(() => helmetAnimating.current.delete(i), FLIP_MS);
-    }, FLIP_MS);
-  }, []);
-
-  const handleHelmetLeave = useCallback((i: number) => {
-    if (helmetAnimating.current.has(i)) return;
-    const pRef = helmetPixelRefs.current[i];
-    if (!pRef) return;
-    helmetAnimating.current.add(i);
-    pRef.appear();
-    setTimeout(() => {
-      setHelmetFlipped(prev => { const n = [...prev]; n[i] = false; return n; });
-      pRef.disappear();
-      setTimeout(() => helmetAnimating.current.delete(i), FLIP_MS);
     }, FLIP_MS);
   }, []);
 
@@ -862,107 +831,10 @@ export default function HeroSection() {
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          SECTION 4 — For Speed / For Adventure  (white bg)
+          SECTION 4 — For the Track / For the Wild
+          Pure-CSS hover: base image lifts out, reveal rises in
       ════════════════════════════════════════════════════════ */}
-      <section data-nav-theme="light" className="w-full bg-white overflow-hidden relative">
-
-        {/* ── Shared diamond background — spans full width ─── */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/diamond-bg.png"
-          alt=""
-          aria-hidden
-          className="absolute inset-0 w-full h-full pointer-events-none select-none"
-          style={{ objectFit: "cover", objectPosition: "center", zIndex: 0 }}
-        />
-
-        <div
-          className="relative grid grid-cols-2 px-5 md:px-[200px] py-12 md:py-[120px]"
-          style={{ zIndex: 1 }}
-        >
-
-          {/* ── Left: FOR SPEED — text left, helmet bleeds left ── */}
-          <div className="relative flex flex-col">
-            <div className="relative z-10 pt-12 md:pt-16 px-5 md:px-10 flex flex-col items-start">
-              <div style={{ letterSpacing: "0.02em" }}>
-                <p style={{ fontFamily: "var(--font-blender), sans-serif", fontSize: "clamp(28px, 3.8vw, 52px)", fontWeight: 800, color: "#000", lineHeight: 1 }}>
-                  FOR THE TRACK
-                </p>
-              </div>
-              <p className="mt-2" style={{ fontFamily: "var(--font-blender), sans-serif", fontSize: "16px", fontWeight: 300, color: "#000", lineHeight: 1.6, maxWidth: "260px" }}>
-                Multi-stage racing championship that brings together riders from across India.
-              </p>
-              <button aria-label="Learn more about For Speed" className="flex items-center justify-center mt-6" style={{ width: "32px", height: "32px", background: "#EC631E", flexShrink: 0 }}>
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
-                  <path d="M1 10L10 1M10 1H3M10 1V8" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            </div>
-
-            {/* Track helmet → bike on hover */}
-            <div
-              className="relative cursor-pointer"
-              style={{ marginTop: "24px", marginLeft: "-14%", width: "100%" }}
-              onMouseEnter={() => handleHelmetEnter(0)}
-              onMouseLeave={() => handleHelmetLeave(0)}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={helmetFlipped[0] ? "/bike-track.png" : "/helmet-speed.png"}
-                alt=""
-                style={{ width: "100%", display: "block", transform: "rotate(8deg)", transformOrigin: "center bottom" }}
-              />
-              <PixelCard
-                ref={(el) => { helmetPixelRefs.current[0] = el; }}
-                variant="ktm"
-                noHover
-                className="pixel-card-overlay"
-              />
-            </div>
-          </div>
-
-          {/* ── Right: FOR ADVENTURE — text right, helmet bleeds right ── */}
-          <div className="relative flex flex-col items-end">
-            <div className="relative z-10 pt-12 md:pt-16 px-5 md:px-10 flex flex-col items-end w-full" style={{ textAlign: "right" }}>
-              <div style={{ letterSpacing: "0.02em" }}>
-                <p style={{ fontFamily: "var(--font-blender), sans-serif", fontSize: "clamp(28px, 3.8vw, 52px)", fontWeight: 800, color: "#000", lineHeight: 1 }}>
-                  FOR THE WILD
-                </p>
-              </div>
-              <p className="mt-2" style={{ fontFamily: "var(--font-blender), sans-serif", fontSize: "16px", fontWeight: 300, color: "#000", lineHeight: 1.6, maxWidth: "260px", textAlign: "right" }}>
-                Closed-Circuit Off-Road training program designed by KTM Adventure Experts.
-              </p>
-              <button aria-label="Learn more about For Adventure" className="flex items-center justify-center mt-6" style={{ width: "32px", height: "32px", background: "#EC631E", flexShrink: 0 }}>
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
-                  <path d="M1 10L10 1M10 1H3M10 1V8" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            </div>
-
-            {/* Wild helmet → bike on hover */}
-            <div
-              className="relative cursor-pointer"
-              style={{ marginTop: "24px", marginRight: "-14%", width: "100%" }}
-              onMouseEnter={() => handleHelmetEnter(1)}
-              onMouseLeave={() => handleHelmetLeave(1)}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={helmetFlipped[1] ? "/bike-wild.png" : "/helmet-adventure.png"}
-                alt=""
-                style={{ width: "100%", display: "block", transform: "rotate(-5.56deg)", transformOrigin: "center bottom" }}
-              />
-              <PixelCard
-                ref={(el) => { helmetPixelRefs.current[1] = el; }}
-                variant="ktm"
-                noHover
-                className="pixel-card-overlay"
-              />
-            </div>
-          </div>
-
-        </div>
-      </section>
+      <TrackWildSection />
     </>
   );
 }

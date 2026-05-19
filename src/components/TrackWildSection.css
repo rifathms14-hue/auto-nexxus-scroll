@@ -1,0 +1,162 @@
+/* ─────────────────────────────────────────────────────────────
+   Track / Wild section  (ktw = KTM Track Wild)
+   Desktop : static helmet image.
+   Mobile  : full 3-D gyroscope tilt — transform + shadow
+             driven entirely by JS RAF loop (no CSS transition
+             on the wrap; lerp handles smoothing instead).
+───────────────────────────────────────────────────────────────── */
+
+/* ── Section shell ──────────────────────────────────────────── */
+.ktw-section {
+  background: #ffffff;
+  color: #000000;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* ── 2-col grid ─────────────────────────────────────────────── */
+.ktw-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 719px) {
+  .ktw-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Card (full-surface anchor) ─────────────────────────────── */
+.ktw-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px 32px 0;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  outline-offset: 3px;
+  border-right: 1px solid #e8e8e8;
+}
+
+.ktw-card:last-child {
+  border-right: none;
+}
+
+@media (min-width: 720px) {
+  .ktw-card {
+    padding: 80px 60px 0;
+  }
+}
+
+.ktw-card--right {
+  align-items: flex-end;
+  text-align: right;
+}
+
+/* ── Content block ──────────────────────────────────────────── */
+.ktw-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ktw-card--right .ktw-content {
+  align-items: flex-end;
+}
+
+/* ── Heading ────────────────────────────────────────────────── */
+.ktw-heading {
+  font-family: var(--font-blender), system-ui, sans-serif;
+  font-weight: 900;
+  font-size: clamp(36px, 4.5vw, 64px);
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: #000;
+  margin: 0;
+}
+
+/* ── Sub copy ───────────────────────────────────────────────── */
+.ktw-copy {
+  font-family: var(--font-blender), system-ui, sans-serif;
+  font-weight: 300;
+  font-size: 15px;
+  color: #5b5b5b;
+  max-width: 38ch;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── CTA square ─────────────────────────────────────────────── */
+.ktw-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: #ff6600;
+  color: #fff;
+  flex-shrink: 0;
+  transition: background 0.3s ease;
+}
+
+.ktw-card:hover .ktw-cta,
+.ktw-card:focus-visible .ktw-cta {
+  background: #000;
+}
+
+.ktw-cta svg {
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.ktw-card:hover .ktw-cta svg,
+.ktw-card:focus-visible .ktw-cta svg {
+  transform: translate(2px, -2px);
+}
+
+/* ── Image stage ────────────────────────────────────────────── */
+.ktw-stage {
+  width: 100%;
+  margin-top: 40px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  /* overflow:visible so the drop-shadow isn't clipped during tilt */
+  overflow: visible;
+}
+
+/* ── Helmet wrapper
+   JS writes:  perspective(Npx) rotateX(Xdeg) rotateY(Ydeg)
+               translateX(tx)   translateY(ty)
+               + filter: drop-shadow(…)
+   No CSS transition here — the RAF lerp owns smoothing.
+   will-change tells the compositor to promote this layer.       */
+.ktw-helmet-wrap {
+  width: 88%;
+  max-width: 500px;
+  will-change: transform, filter;
+  /* Baseline shadow so the tilt pop isn't jarring on first frame */
+  filter: drop-shadow(0px 12px 24px rgba(0, 0, 0, 0.18));
+  transform-origin: 50% 55%;
+  transform-style: preserve-3d;
+}
+
+.ktw-helmet-wrap img {
+  width: 100%;
+  height: auto;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+/* ── Reduced-motion — zero transform, static shadow ────────── */
+@media (prefers-reduced-motion: reduce) {
+  .ktw-helmet-wrap {
+    will-change: auto !important;
+    transform: none !important;
+    filter: drop-shadow(0px 12px 24px rgba(0, 0, 0, 0.18)) !important;
+  }
+}
