@@ -13,6 +13,13 @@
   overflow: hidden;
 }
 
+@media (max-width: 719px) {
+  .ktw-section {
+    padding-top: 80px;
+    padding-bottom: 80px;
+  }
+}
+
 /* ── Always 2-column grid — face-off on all breakpoints ─────── */
 .ktw-grid {
   display: grid;
@@ -240,6 +247,26 @@
 .ktw-card--stacked .ktw-copy {
   display: block;
   font-size: 14px;
+}
+
+/* Stacked heading: 32px on mobile */
+@media (max-width: 719px) {
+  .ktw-grid--stacked .ktw-heading {
+    font-size: 32px;
+  }
+
+  /* Override the face-off bleed margins for stacked helmets */
+  .ktw-helmet-wrap--stacked {
+    width: 85%;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Remove divider line between stacked cards */
+  .ktw-card--stacked {
+    border-top: none;
+  }
 }
 
 /* ── Reduced-motion — static image, no tilt ─────────────────── */
