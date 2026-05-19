@@ -45,7 +45,7 @@ type DOEStatic = typeof DeviceOrientationEvent & {
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function TrackWildSection() {
+export default function TrackWildSection({ stacked = false }: { stacked?: boolean }) {
   const helmetRefs = useRef<(HTMLDivElement | null)[]>([]);
   const state = useRef({ targetX: 0, currentX: 0, targetY: 0, currentY: 0 });
   const rafRef = useRef<number>(0);
@@ -149,16 +149,16 @@ export default function TrackWildSection() {
   return (
     <section
       data-nav-theme="light"
-      className="ktw-section"
+      className={`ktw-section${stacked ? " ktw-section--stacked" : ""}`}
       aria-label="KTM Riding Programs"
     >
-      <div className="ktw-grid">
+      <div className={`ktw-grid${stacked ? " ktw-grid--stacked" : ""}`}>
         {CARDS.map((card, i) => (
           <a
             key={card.id}
             href={`#${card.id}`}
             aria-label={card.ariaLabel}
-            className={`ktw-card ktw-card--${card.align}`}
+            className={`ktw-card ktw-card--${card.align}${stacked ? " ktw-card--stacked" : ""}`}
           >
             {/* ── Text content ─────────────────────────────────── */}
             <div className="ktw-content">
@@ -185,7 +185,7 @@ export default function TrackWildSection() {
             <div className="ktw-stage">
               <div
                 ref={(el) => { helmetRefs.current[i] = el; }}
-                className={`ktw-helmet-wrap${card.flip ? " ktw-helmet-wrap--flip" : ""}`}
+                className={`ktw-helmet-wrap${stacked ? " ktw-helmet-wrap--stacked" : ""}`}
               >
                 <NextImage
                   src={card.helmet.src}

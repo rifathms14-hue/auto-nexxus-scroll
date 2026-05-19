@@ -28,12 +28,7 @@
   color: inherit;
   cursor: pointer;
   outline-offset: 3px;
-  border-right: 1px solid #e8e8e8;
   overflow: visible;
-}
-
-.ktw-card:last-child {
-  border-right: none;
 }
 
 @media (min-width: 720px) {
@@ -83,21 +78,27 @@
   }
 }
 
-/* ── Sub copy — hidden on mobile, visible on desktop ────────── */
+/* Face-off section: fixed 32px heading on mobile */
+@media (max-width: 719px) {
+  .ktw-grid:not(.ktw-grid--stacked) .ktw-heading {
+    font-size: 32px;
+  }
+}
+
+/* ── Sub copy ───────────────────────────────────────────────── */
 .ktw-copy {
   font-family: var(--font-blender), system-ui, sans-serif;
   font-weight: 300;
-  font-size: 15px;
+  font-size: 12px;
   color: #5b5b5b;
   max-width: 38ch;
   line-height: 1.5;
   margin: 0;
-  display: none;
 }
 
 @media (min-width: 720px) {
   .ktw-copy {
-    display: block;
+    font-size: 15px;
   }
 }
 
@@ -188,6 +189,58 @@
   pointer-events: none;
 }
 
+
+/* ── Stacked variant — mobile only, single column ───────────── */
+.ktw-section--stacked {
+  display: none;
+}
+
+@media (max-width: 719px) {
+  .ktw-section--stacked {
+    display: block;
+  }
+}
+
+.ktw-grid--stacked {
+  grid-template-columns: 1fr;
+}
+
+.ktw-card--stacked {
+  align-items: flex-start;
+  text-align: left;
+  padding: 48px 20px 0;
+  border-right: none;
+  border-top: 1px solid #e8e8e8;
+}
+
+@media (min-width: 720px) {
+  .ktw-card--stacked {
+    padding: 80px 60px 0;
+  }
+}
+
+/* Right card in stacked mode reverts to left-aligned */
+.ktw-card--stacked.ktw-card--right {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.ktw-card--stacked.ktw-card--right .ktw-content {
+  align-items: flex-start;
+}
+
+/* Stacked helmet — no bleed, centred, full column width */
+.ktw-helmet-wrap--stacked {
+  width: 85%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* Always show sub-copy in stacked mode */
+.ktw-card--stacked .ktw-copy {
+  display: block;
+  font-size: 14px;
+}
 
 /* ── Reduced-motion — static image, no tilt ─────────────────── */
 @media (prefers-reduced-motion: reduce) {

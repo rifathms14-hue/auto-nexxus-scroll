@@ -289,7 +289,7 @@ export default function HeroSection() {
     if (!wrap || !overlay || !text) return;
 
     // Set GSAP-owned initial states (keeps React inline styles clean)
-    gsap.set(wrap,    { top: "6%", right: "7.5%", bottom: "6%", left: "7.5%", borderRadius: 20 });
+    gsap.set(wrap,    { top: "6%", right: "7.5%", bottom: "6%", left: "7.5%", borderRadius: 0 });
     gsap.set(overlay, { opacity: 0 });
     gsap.set(text,    { opacity: 0, y: 52 });
 
@@ -835,6 +835,7 @@ export default function HeroSection() {
           Pure-CSS hover: base image lifts out, reveal rises in
       ════════════════════════════════════════════════════════ */}
       <TrackWildSection />
+      <TrackWildSection stacked />
     </>
   );
 }
