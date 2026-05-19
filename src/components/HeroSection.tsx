@@ -103,11 +103,24 @@ export default function HeroSection() {
   const cinematicText   = useRef<HTMLDivElement>(null);
 
   // ── Loading state ─────────────────────────────────────────
-  const [loadedCount, setLoadedCount]   = useState(0);
-  const [minDelayDone, setMinDelayDone] = useState(false);
-  const loadingDone = loadedCount >= TOTAL_FRAMES && minDelayDone;
+  // Refs avoid 193 setState calls (one per frame image).
+  // Two conditions must both be true before loader clears:
+  //   framesDone  — all images settled (load OR error) OR 5 s hard cap
+  //   minDelayDone — at least 2.5 s has passed (intentional brand hold)
+  const framesDoneRef   = useRef(false);
+  const minDelayDoneRef = useRef(false);
+  const loadingDoneRef  = useRef(false);
+  const [loadingDone, setLoadingDoneState] = useState(false);
 
-  // ── Hero text: appears 4 s after loader clears ────────────
+  const triggerLoadingDone = useCallback(() => {
+    if (loadingDoneRef.current) return;
+    if (!framesDoneRef.current || !minDelayDoneRef.current) return;
+    loadingDoneRef.current = true;
+    setLoadingDoneState(true);
+  }, []);
+
+  // ── Hero text: appears 1.2 s after loader clears ─────────
+  // (overlay CSS fade is 700 ms, so text is visible ~500 ms after fully gone)
   const [heroTextVisible, setHeroTextVisible] = useState(false);
 
   // ── Carousel state ───────────────────────────────────────
@@ -172,16 +185,30 @@ export default function HeroSection() {
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   };
 
-  // ── 2-second minimum loading hold ────────────────────────
+  // ── Min hold: 2.5 s brand moment ─────────────────────────
   useEffect(() => {
-    const t = setTimeout(() => setMinDelayDone(true), 2000);
+    const t = setTimeout(() => {
+      minDelayDoneRef.current = true;
+      triggerLoadingDone();
+    }, 2500);
     return () => clearTimeout(t);
-  }, []);
+  }, [triggerLoadingDone]);
 
-  // ── Reveal hero text 4 s after loader clears ─────────────
+  // ── Hard cap: 5 s max — never get stuck ──────────────────
+  useEffect(() => {
+    const t = setTimeout(() => {
+      framesDoneRef.current   = true;
+      minDelayDoneRef.current = true;
+      triggerLoadingDone();
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [triggerLoadingDone]);
+
+  // ── Reveal hero text 1.2 s after loader clears ───────────
+  // Overlay CSS fade = 700 ms, so text appears ~500 ms after fully gone
   useEffect(() => {
     if (!loadingDone) return;
-    const t = setTimeout(() => setHeroTextVisible(true), 4000);
+    const t = setTimeout(() => setHeroTextVisible(true), 1200);
     return () => clearTimeout(t);
   }, [loadingDone]);
 
@@ -208,18 +235,23 @@ export default function HeroSection() {
   useEffect(() => {
     const isMobile = window.innerWidth < 768;
     const path = isMobile ? FRAME_PATH_MOBILE : FRAME_PATH;
+    let settled = 0;
     imagesRef.current = Array.from({ length: TOTAL_FRAMES }, (_, i) => {
       const img = new Image();
       img.src = path(i + 1);
-      img.onload = () => {
-        setLoadedCount((c) => {
-          if (i === 0) drawFrame(0);
-          return c + 1;
-        });
+      const onSettle = () => {
+        if (i === 0 && img.complete && img.naturalWidth > 0) drawFrame(0);
+        settled++;
+        if (settled >= TOTAL_FRAMES) {
+          framesDoneRef.current = true;
+          triggerLoadingDone();
+        }
       };
+      img.onload  = onSettle;
+      img.onerror = onSettle; // count failures — never get stuck
       return img;
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [triggerLoadingDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Size canvas: 80vw portrait on mobile, 42vw landscape on desktop ──
   useEffect(() => {
