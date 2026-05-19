@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import NextImage from "next/image";
 import "./TrackWildSection.css";
 
@@ -46,8 +46,6 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
   const helmetRefs = useRef<(HTMLDivElement | null)[]>([]);
   const tiltState  = useRef({ targetX: 0, currentX: 0, targetY: 0, currentY: 0 });
   const rafRef     = useRef<number>(0);
-
-  const [showIOSPrompt, setShowIOSPrompt] = useState(false);
 
   // ── Stable orientation handler ─────────────────────────────────────────────
   const handleOrientation = useCallback((e: DeviceOrientationEvent) => {
@@ -115,8 +113,11 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
     const DOE = DeviceOrientationEvent as DOEStatic;
 
     if (typeof DOE.requestPermission === "function") {
+      // iOS 13+ — needs a user-gesture to call requestPermission().
+      // We piggyback on the very first touchend anywhere on the page
+      // (a qualifying gesture in Safari) so there is zero visible UI.
       if (stacked) {
-        // Stacked section on iOS: wait for face-off section to grant permission
+        // Stacked section: wait for the face-off instance to grant & broadcast.
         const onGranted = () => {
           window.addEventListener("deviceorientation", handleOrientation, { passive: true });
         };
@@ -125,33 +126,30 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
           window.removeEventListener("ktw-gyro-granted", onGranted);
           window.removeEventListener("deviceorientation", handleOrientation);
         };
-      } else {
-        setShowIOSPrompt(true);
       }
-    } else {
-      window.addEventListener("deviceorientation", handleOrientation, { passive: true });
+
+      // Face-off section: silently request on first touch — no button needed.
+      const requestOnTouch = () => {
+        (DOE.requestPermission!() as Promise<"granted" | "denied">)
+          .then((result) => {
+            if (result === "granted") {
+              window.addEventListener("deviceorientation", handleOrientation, { passive: true });
+              window.dispatchEvent(new CustomEvent("ktw-gyro-granted"));
+            }
+          })
+          .catch(() => { /* denied or unavailable — stay static */ });
+      };
+      document.addEventListener("touchend", requestOnTouch, { once: true, passive: true });
+      return () => {
+        document.removeEventListener("touchend", requestOnTouch);
+        window.removeEventListener("deviceorientation", handleOrientation);
+      };
     }
 
-    return () => {
-      window.removeEventListener("deviceorientation", handleOrientation);
-    };
+    // Android / non-iOS — no permission gate, attach directly.
+    window.addEventListener("deviceorientation", handleOrientation, { passive: true });
+    return () => window.removeEventListener("deviceorientation", handleOrientation);
   }, [handleOrientation, stacked]);
-
-  // ── iOS permission ─────────────────────────────────────────────────────────
-  const requestIOSPermission = useCallback(async () => {
-    const DOE = DeviceOrientationEvent as DOEStatic;
-    if (typeof DOE.requestPermission !== "function") return;
-    try {
-      const result = await DOE.requestPermission();
-      if (result === "granted") {
-        window.addEventListener("deviceorientation", handleOrientation, { passive: true });
-        window.dispatchEvent(new CustomEvent("ktw-gyro-granted"));
-      }
-    } catch {
-      // denied — fail silently
-    }
-    setShowIOSPrompt(false);
-  }, [handleOrientation]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -210,22 +208,6 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
         ))}
       </div>
 
-      {/* iOS motion permission prompt */}
-      {showIOSPrompt && !stacked && (
-        <div className="ktw-ios-prompt">
-          <button
-            onClick={requestIOSPermission}
-            className="ktw-ios-prompt__btn"
-            aria-label="Enable gyroscope tilt effect"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-              <path d="M12 18h.01" />
-            </svg>
-            Tap to feel the motion
-          </button>
-        </div>
-      )}
     </section>
   );
 }
