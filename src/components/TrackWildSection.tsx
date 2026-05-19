@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import TiltedCard, { type TiltedCardHandle } from "./TiltedCard";
+import NextImage from "next/image";
 import "./TrackWildSection.css";
 
 // ─── Card data ────────────────────────────────────────────────────────────────
@@ -26,9 +26,16 @@ const CARDS = [
 
 // ─── Tilt config ──────────────────────────────────────────────────────────────
 const CFG = {
-  maxRotX:    6,
-  maxRotY:    9,
+  maxRotX:    5,
+  maxRotY:    5,    // reduced — less left/right distort
   betaOffset: 62,
+  lerp:       0.04,
+  parallaxX:  1.0,  // reduced lateral translate
+  parallaxY:  1.4,  // stronger vertical float
+  parallaxZ:  8,    // new: depth push as tilt magnitude grows
+  shadowBaseY:    14,
+  shadowBaseBlur: 22,
+  shadowTiltMul:  0.3,
 };
 
 type DOEStatic = typeof DeviceOrientationEvent & {
@@ -37,16 +44,70 @@ type DOEStatic = typeof DeviceOrientationEvent & {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function TrackWildSection({ stacked = false }: { stacked?: boolean }) {
-  const tiltedCardRefs = useRef<(TiltedCardHandle | null)[]>([]);
+  const helmetRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const tiltState  = useRef({ targetX: 0, currentX: 0, targetY: 0, currentY: 0 });
+  const rafRef     = useRef<number>(0);
+
   const [showIOSPrompt, setShowIOSPrompt] = useState(false);
 
   // ── Stable orientation handler ─────────────────────────────────────────────
   const handleOrientation = useCallback((e: DeviceOrientationEvent) => {
     if (e.gamma === null || e.beta === null) return;
-    const rx = clamp(-(e.beta - CFG.betaOffset) * 0.28, -CFG.maxRotX, CFG.maxRotX);
-    const ry = clamp(e.gamma * 0.38, -CFG.maxRotY, CFG.maxRotY);
-    tiltedCardRefs.current.forEach(card => card?.setGyro(rx, ry));
+    tiltState.current.targetY = clamp(e.gamma * 0.28, -CFG.maxRotY, CFG.maxRotY);
+    tiltState.current.targetX = clamp(
+      -(e.beta - CFG.betaOffset) * 0.28, -CFG.maxRotX, CFG.maxRotX,
+    );
   }, []);
+
+  // ── RAF loop ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let active = true;
+
+    const tick = () => {
+      if (!active) return;
+      rafRef.current = requestAnimationFrame(tick);
+
+      const s = tiltState.current;
+      s.currentX += (s.targetX - s.currentX) * CFG.lerp;
+      s.currentY += (s.targetY - s.currentY) * CFG.lerp;
+
+      const cX  = s.currentX;
+      const cY  = s.currentY;
+      const mag = Math.sqrt(cX * cX + cY * cY);
+
+      const tx =  cY * CFG.parallaxX;
+      const ty = -cX * CFG.parallaxY;
+      const tz =  mag * CFG.parallaxZ;  // depth — helmet floats toward viewer as tilt increases
+
+      const shadowX    = (-cY * 0.55).toFixed(1);
+      const shadowY    = (CFG.shadowBaseY + cX * 0.4).toFixed(1);
+      const shadowBlur = (CFG.shadowBaseBlur + mag * CFG.shadowTiltMul).toFixed(1);
+      const shadowA    = (0.18 + mag * 0.008).toFixed(3);
+
+      helmetRefs.current.forEach((el) => {
+        if (!el) return;
+        el.style.transform = [
+          `perspective(850px)`,
+          `translateX(${tx.toFixed(2)}px)`,
+          `translateY(${ty.toFixed(2)}px)`,
+          `translateZ(${tz.toFixed(2)}px)`,
+          `rotateX(${cX.toFixed(3)}deg)`,
+          `rotateY(${cY.toFixed(3)}deg)`,
+        ].join(" ");
+        el.style.filter =
+          `drop-shadow(${shadowX}px ${shadowY}px ${shadowBlur}px rgba(0,0,0,${shadowA}))`;
+      });
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      active = false;
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sensor setup ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -58,7 +119,7 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
 
     if (typeof DOE.requestPermission === "function") {
       if (stacked) {
-        // Stacked section: wait for face-off to grant permission via custom event
+        // Stacked section on iOS: wait for face-off section to grant permission
         const onGranted = () => {
           window.addEventListener("deviceorientation", handleOrientation, { passive: true });
         };
@@ -79,7 +140,7 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
     };
   }, [handleOrientation, stacked]);
 
-  // ── iOS permission: called synchronously from button onClick ───────────────
+  // ── iOS permission ─────────────────────────────────────────────────────────
   const requestIOSPermission = useCallback(async () => {
     const DOE = DeviceOrientationEvent as DOEStatic;
     if (typeof DOE.requestPermission !== "function") return;
@@ -90,7 +151,7 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
         window.dispatchEvent(new CustomEvent("ktw-gyro-granted"));
       }
     } catch {
-      // Permission denied — fail silently
+      // denied — fail silently
     }
     setShowIOSPrompt(false);
   }, [handleOrientation]);
@@ -133,14 +194,18 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
 
             {/* ── Helmet stage ─────────────────────────────────── */}
             <div className="ktw-stage">
-              <div className={`ktw-helmet-wrap${stacked ? " ktw-helmet-wrap--stacked" : ""}`}>
-                <TiltedCard
-                  ref={(el) => { tiltedCardRefs.current[i] = el; }}
-                  imageSrc={card.helmet.src}
-                  altText={card.helmet.alt}
-                  rotateAmplitude={9}
-                  scaleOnHover={1.04}
-                  showTooltip={false}
+              <div
+                ref={(el) => { helmetRefs.current[i] = el; }}
+                className={`ktw-helmet-wrap${stacked ? " ktw-helmet-wrap--stacked" : ""}`}
+              >
+                <NextImage
+                  src={card.helmet.src}
+                  alt={card.helmet.alt}
+                  width={600}
+                  height={600}
+                  loading="lazy"
+                  sizes="(max-width: 719px) calc(50vw + 20px), 44vw"
+                  style={{ width: "100%", height: "auto" }}
                 />
               </div>
             </div>
@@ -148,7 +213,7 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
         ))}
       </div>
 
-      {/* iOS motion permission prompt — only on face-off, only iOS 13+ */}
+      {/* iOS motion permission prompt */}
       {showIOSPrompt && !stacked && (
         <div className="ktw-ios-prompt">
           <button

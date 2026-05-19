@@ -153,6 +153,8 @@
 .ktw-stage {
   width: 100%;
   margin-top: 20px;
+  perspective: 900px;
+  perspective-origin: 50% 40%;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -169,7 +171,10 @@
 .ktw-helmet-wrap {
   width: 88%;
   max-width: 500px;
+  will-change: transform, filter;
   filter: drop-shadow(0px 12px 24px rgba(0, 0, 0, 0.18));
+  transform-origin: 50% 55%;
+  transform-style: preserve-3d;
 }
 
 /* Mobile: bleed -20px on both sides for face-off overlap */
@@ -292,9 +297,11 @@
   background: #000;
 }
 
-/* ── Reduced-motion — springs don't fire; figure stays flat ──── */
+/* ── Reduced-motion — static image, no tilt ─────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .tilted-card-inner {
+  .ktw-helmet-wrap {
+    will-change: auto !important;
     transform: none !important;
+    filter: drop-shadow(0px 12px 24px rgba(0, 0, 0, 0.18)) !important;
   }
 }
