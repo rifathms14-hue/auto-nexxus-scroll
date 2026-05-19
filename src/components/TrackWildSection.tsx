@@ -28,15 +28,15 @@ const CARDS = [
 
 // ─── Tilt config ──────────────────────────────────────────────────────────────
 const CFG = {
-  maxRotX:    13,
-  maxRotY:    18,
-  betaOffset: 62,   // subtract to get delta from natural upright hold
-  lerp:       0.06, // smoothing — lower = more inertia
-  parallaxX:  3.5,
-  parallaxY:  2.0,
+  maxRotX:    6,    // was 13 — tighter ceiling keeps it refined
+  maxRotY:    9,    // was 18
+  betaOffset: 62,
+  lerp:       0.04, // was 0.06 — slower catch-up = heavier, more cinematic feel
+  parallaxX:  1.5,  // was 3.5
+  parallaxY:  0.8,  // was 2.0
   shadowBaseY:   14,
   shadowBaseBlur: 22,
-  shadowTiltMul:  0.7,
+  shadowTiltMul:  0.3, // was 0.7 — shadow barely grows with tilt
 };
 
 // ─── iOS permission shim type ─────────────────────────────────────────────────
