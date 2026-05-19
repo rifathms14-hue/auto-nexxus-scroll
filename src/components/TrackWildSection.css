@@ -269,6 +269,34 @@
   }
 }
 
+/* ── iOS motion permission prompt ───────────────────────────── */
+.ktw-ios-prompt {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 32px;
+}
+
+.ktw-ios-prompt__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #ff6600;
+  color: #fff;
+  font-family: var(--font-blender), system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.ktw-ios-prompt__btn:active {
+  background: #000;
+}
+
 /* ── Reduced-motion — static image, no tilt ─────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .ktw-helmet-wrap {

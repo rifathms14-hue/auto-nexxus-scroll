@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import NextImage from "next/image";
 import "./TrackWildSection.css";
 
@@ -9,7 +9,6 @@ const CARDS = [
   {
     id: "track",
     align: "left" as const,
-    flip: false,
     heading: ["FOR THE", "TRACK"],
     copy: "Multi-stage racing championship that brings together riders from across India.",
     ariaLabel: "For the Track — explore multi-stage racing",
@@ -28,44 +27,52 @@ const CARDS = [
 
 // ─── Tilt config ──────────────────────────────────────────────────────────────
 const CFG = {
-  maxRotX:    6,    // was 13 — tighter ceiling keeps it refined
-  maxRotY:    9,    // was 18
+  maxRotX:    6,
+  maxRotY:    9,
   betaOffset: 62,
-  lerp:       0.04, // was 0.06 — slower catch-up = heavier, more cinematic feel
-  parallaxX:  1.5,  // was 3.5
-  parallaxY:  0.8,  // was 2.0
-  shadowBaseY:   14,
+  lerp:       0.04,
+  parallaxX:  1.5,
+  parallaxY:  0.8,
+  shadowBaseY:    14,
   shadowBaseBlur: 22,
-  shadowTiltMul:  0.3, // was 0.7 — shadow barely grows with tilt
+  shadowTiltMul:  0.3,
 };
 
-// ─── iOS permission shim type ─────────────────────────────────────────────────
 type DOEStatic = typeof DeviceOrientationEvent & {
   requestPermission?: () => Promise<"granted" | "denied">;
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function TrackWildSection({ stacked = false }: { stacked?: boolean }) {
-  const helmetRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const state = useRef({ targetX: 0, currentX: 0, targetY: 0, currentY: 0 });
-  const rafRef = useRef<number>(0);
+  const helmetRefs   = useRef<(HTMLDivElement | null)[]>([]);
+  const tiltState    = useRef({ targetX: 0, currentX: 0, targetY: 0, currentY: 0 });
+  const rafRef       = useRef<number>(0);
 
+  // iOS-specific: show a tap-to-enable prompt
+  const [showIOSPrompt, setShowIOSPrompt] = useState(false);
+
+  // ── Stable orientation handler ──────────────────────────────────────────────
+  const handleOrientation = useCallback((e: DeviceOrientationEvent) => {
+    if (e.gamma === null || e.beta === null) return;
+    tiltState.current.targetY = clamp(e.gamma * 0.38, -CFG.maxRotY, CFG.maxRotY);
+    tiltState.current.targetX = clamp(
+      -(e.beta - CFG.betaOffset) * 0.28, -CFG.maxRotX, CFG.maxRotX,
+    );
+  }, []);
+
+  // ── RAF loop — runs as long as component is mounted ─────────────────────────
+  // Keeps animating at (0,0) until sensor data arrives — no visible jump.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (typeof DeviceOrientationEvent === "undefined") return;
-
-    // Respect reduced-motion at the JS level too (CSS !important handles the
-    // visual fallback, but we skip the RAF loop to save battery)
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let active = true;
 
-    // ── 60fps lerp loop ────────────────────────────────────────────────────
     const tick = () => {
       if (!active) return;
       rafRef.current = requestAnimationFrame(tick);
 
-      const s = state.current;
+      const s   = tiltState.current;
       s.currentX += (s.targetX - s.currentX) * CFG.lerp;
       s.currentY += (s.targetY - s.currentY) * CFG.lerp;
 
@@ -73,15 +80,13 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
       const cY  = s.currentY;
       const mag = Math.sqrt(cX * cX + cY * cY);
 
-      // Screen-space parallax before the 3-D rotation
       const tx =  cY * CFG.parallaxX;
       const ty = -cX * CFG.parallaxY;
 
-      // Dynamic shadow tracks a top-centre light source
       const shadowX    = (-cY * 0.55).toFixed(1);
       const shadowY    = (CFG.shadowBaseY + cX * 0.4).toFixed(1);
       const shadowBlur = (CFG.shadowBaseBlur + mag * CFG.shadowTiltMul).toFixed(1);
-      const shadowAlpha = (0.18 + mag * 0.008).toFixed(3);
+      const shadowA    = (0.18 + mag * 0.008).toFixed(3);
 
       helmetRefs.current.forEach((el) => {
         if (!el) return;
@@ -93,57 +98,55 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
           `rotateY(${cY.toFixed(3)}deg)`,
         ].join(" ");
         el.style.filter =
-          `drop-shadow(${shadowX}px ${shadowY}px ${shadowBlur}px rgba(0,0,0,${shadowAlpha}))`;
+          `drop-shadow(${shadowX}px ${shadowY}px ${shadowBlur}px rgba(0,0,0,${shadowA}))`;
       });
     };
 
     rafRef.current = requestAnimationFrame(tick);
-
-    // ── Sensor handler ─────────────────────────────────────────────────────
-    const handleOrientation = (e: DeviceOrientationEvent) => {
-      // Some devices return null values — bail if so
-      if (e.gamma === null || e.beta === null) return;
-
-      state.current.targetY = clamp(
-        e.gamma * 0.38, -CFG.maxRotY, CFG.maxRotY,
-      );
-      state.current.targetX = clamp(
-        -(e.beta - CFG.betaOffset) * 0.28, -CFG.maxRotX, CFG.maxRotX,
-      );
+    return () => {
+      active = false;
+      cancelAnimationFrame(rafRef.current);
     };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ── Attach the listener ────────────────────────────────────────────────
-    // No isTouch gate — deviceorientation simply won't fire on desktops,
-    // so the loop runs but cX/cY stay at 0 (transform: perspective(850px) = identity).
-    const attachListener = () => {
-      window.addEventListener("deviceorientation", handleOrientation, { passive: true });
-    };
+  // ── Sensor setup — separate from RAF loop ───────────────────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (typeof DeviceOrientationEvent === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const DOE = DeviceOrientationEvent as DOEStatic;
 
     if (typeof DOE.requestPermission === "function") {
-      // iOS 13+ — requestPermission must be called inside a user-gesture handler.
-      // We listen for the very first touchstart on the document.
-      const onFirstTouch = () => {
-        DOE.requestPermission!()
-          .then((s) => { if (s === "granted") attachListener(); })
-          .catch(() => {});
-      };
-      document.addEventListener("touchstart", onFirstTouch, {
-        once: true,
-        passive: true,
-      });
+      // iOS 13+ — permission MUST come from a direct user click (not touchstart).
+      // Show a branded tap prompt; the onClick calls requestPermission() directly.
+      setShowIOSPrompt(true);
     } else {
-      // Android + non-iOS browsers — attach immediately, no permission needed.
-      attachListener();
+      // Android / non-iOS — no permission dialog needed.
+      window.addEventListener("deviceorientation", handleOrientation, { passive: true });
     }
 
     return () => {
-      active = false;
-      cancelAnimationFrame(rafRef.current);
       window.removeEventListener("deviceorientation", handleOrientation);
     };
-  }, []);
+  }, [handleOrientation]);
+
+  // ── iOS permission: called synchronously from button onClick ────────────────
+  // Safari only accepts requestPermission() when it's the DIRECT result of a
+  // user interaction (click/tap). Anything async or deferred is rejected.
+  const requestIOSPermission = useCallback(async () => {
+    const DOE = DeviceOrientationEvent as DOEStatic;
+    if (typeof DOE.requestPermission !== "function") return;
+    try {
+      const result = await DOE.requestPermission();
+      if (result === "granted") {
+        window.addEventListener("deviceorientation", handleOrientation, { passive: true });
+      }
+    } catch {
+      // Permission denied or not available — fail silently, hide prompt
+    }
+    setShowIOSPrompt(false);
+  }, [handleOrientation]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -201,6 +204,24 @@ export default function TrackWildSection({ stacked = false }: { stacked?: boolea
           </a>
         ))}
       </div>
+
+      {/* iOS motion permission prompt — only shown on iOS 13+, only on face-off */}
+      {showIOSPrompt && !stacked && (
+        <div className="ktw-ios-prompt">
+          <button
+            onClick={requestIOSPermission}
+            className="ktw-ios-prompt__btn"
+            aria-label="Enable gyroscope tilt effect"
+          >
+            {/* Phone tilt icon */}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+              <path d="M12 18h.01" />
+            </svg>
+            Tap to feel the motion
+          </button>
+        </div>
+      )}
     </section>
   );
 }
